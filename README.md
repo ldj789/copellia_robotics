@@ -13,8 +13,10 @@ This project is a starting guide to getting Copellia running for robotics simula
   
  - If you can load the program, then you are good to go.
  - If not (for Mac), try this on your terminal and rerun the file. 
-    > - cd yourCoppeliasimDirectory
-    > - sudo xattr -r -d com.apple.quarantine *
+```
+  cd yourCoppeliasimDirectory
+  sudo xattr -r -d com.apple.quarantine *
+```
 
 ### Set up
 
@@ -30,12 +32,14 @@ IMPORTANT: for each successful call to simxStart, there
 should be a corresponding call to simxFinish at the end!
 ```
 
+---
+
 ### Resources
 - [python-api](https://www.coppeliarobotics.com/helpFiles/en/remoteApiFunctionsPython.htm) - Coppelia Python docs
 - [youtube/tutorial](https://www.youtube.com/playlist?list=PLjzuoBhdtaXOoqkJUqhYQletLLnJP8vjZ) - Youtube playlist
 - [CoppeliaSim User Manual](https://www.coppeliarobotics.com/helpFiles/index.html)
 
-
+---
 
 ### Connect Coppelia with Python:
 
@@ -56,6 +60,4 @@ Platform used: PyCharm/Spyder
 5. open simpleTest.py to get test run
 ```
 
-
-### Example   python_vrep_mazi_path.ttt:
 
