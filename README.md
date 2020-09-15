@@ -37,7 +37,7 @@ should be a corresponding call to simxFinish at the end!
 ### Resources
 - [python-api](https://www.coppeliarobotics.com/helpFiles/en/remoteApiFunctionsPython.htm) - Coppelia Python docs
 - [youtube/tutorial](https://www.youtube.com/playlist?list=PLjzuoBhdtaXOoqkJUqhYQletLLnJP8vjZ) - Youtube playlist
-- [CoppeliaSim User Manual](https://www.coppeliarobotics.com/helpFiles/index.html)
+- [CoppeliaSim User Manual](https://www.coppeliarobotics.com/helpFiles/index.html) - User Manual
 
 ---
 
