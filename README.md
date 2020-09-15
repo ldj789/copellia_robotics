@@ -45,8 +45,8 @@ should be a corresponding call to simxFinish at the end!
 
 **Requirement**:  
 
-Python Version: 3.7.4, 64 bit
-Platform used: PyCharm/Spyder
+- Python Version: 3.7.4, 64 bit
+- Platform used: PyCharm/Spyder
 
 
 **Instruction**:
