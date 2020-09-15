@@ -53,11 +53,11 @@ should be a corresponding call to simxFinish at the end!
 ```
 1. Open Coppelia
 2. python_vrep_mazi_path.ttt
-2. Disable Robot Non-threaded child script (here use robot Pioneer_p3dx)
-2. Create a new directory
-3. Copy File to new directory : C:\Program Files\CoppeliaRobotics\CoppeliaSimEdu\programming\remoteApiBindings\python\python 
-4. Copy File to new directory:  C:\Program Files\CoppeliaRobotics\CoppeliaSimEdu\programming\remoteApiBindings\lib\lib\Windows\remoteApi.dll
-5. open simpleTest.py to get test run
+3. Disable Robot Non-threaded child script (here use robot Pioneer_p3dx)
+4. Create a new directory
+5. Copy File to new directory : C:\Program Files\CoppeliaRobotics\CoppeliaSimEdu\programming\remoteApiBindings\python\python 
+6. Copy File to new directory:  C:\Program Files\CoppeliaRobotics\CoppeliaSimEdu\programming\remoteApiBindings\lib\lib\Windows\remoteApi.dll
+7. open simpleTest.py to get test run
 ```
 
 
