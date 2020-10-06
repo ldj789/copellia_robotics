@@ -34,7 +34,9 @@ class Odometer:
     """Track Odometers based upon wheel movements"""
 
     def __init__(
-            self, client_id, r,
+            self,
+            client_id,
+            r,
             left_motor_name='Pioneer_p3dx_leftMotor',
             right_motor_name='Pioneer_p3dx_rightMotor',
             **kwargs

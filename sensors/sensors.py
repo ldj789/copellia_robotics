@@ -40,8 +40,6 @@ class ProximitySensor:
         return state, Vec3(point[0], point[1], point[2])
     
  
-
-    
 class VisionSensor:
 
     def __init__(self, id, handle):
@@ -98,11 +96,10 @@ class ForceSensor:
         return state, force_vector, torque_vector
     
     
-
 class PositionSensor:
 
-    def __init__(self, id, handle):
-        self._id = id
+    def __init__(self, client_id, handle):
+        self._id = client_id
         self._handle = handle
         self._def_op_mode = sim.simx_opmode_oneshot_wait
 
