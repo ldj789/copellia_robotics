@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Jan 06 22:00:39 2015
+"""Basic obstacle avoidance with Braitenberg algorithm
 
-@author: Nikolai K.
 """
 import sys
 import time  # used to keep track of time
@@ -10,10 +7,11 @@ import numpy as np  # array library
 
 import sim
 from sensors.odometery import Odometer
-
-# import matplotlib as mpl   # used for image plotting
+from sensors.position import RobotGPS
+import matplotlib as plt  # used for image plotting
 
 # Pre-Allocation
+saving = False
 PI = np.pi  # constant
 
 sim.simxFinish(-1)  # just in case, close all opened connections
@@ -32,6 +30,7 @@ _, left_motor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_leftMotor
 _, right_motor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_rightMotor', sim.simx_opmode_oneshot_wait)
 
 odometer = Odometer(clientID, .075)
+gps = RobotGPS(clientID)
 
 sensor_handles = []  # empty list for handles
 sensor_val = np.array([])  # empty array for sensor measurements
@@ -62,9 +61,10 @@ for x in range(1, 16 + 1):
 # start time
 t = time.time()
 
-while (time.time() - t) < 60:
+while (time.time() - t) < 15:
     odometer.update_motors()
-    print(f"{odometer}")
+    gps.update_position()
+    print(f"{odometer} {gps}")
 
     # Loop Execution
     sensor_val = np.array([])
@@ -73,16 +73,16 @@ while (time.time() - t) < 60:
             = sim.simxReadProximitySensor(
                   clientID, sensor_handles[x - 1], sim.simx_opmode_oneshot_wait
               )
-        print(
-            f"Result Code: {resCode}\n"
-            f"Detection State {detectionState}\n"
-            f"Detected Point {detectedPoint}\n"
-            f"Detected Object Handle {detectedObjectHandle}"
-        )
+        # print(
+        #     f"Result Code: {resCode}\n"
+        #     f"Detection State {detectionState}\n"
+        #     f"Detected Point {detectedPoint}\n"
+        #     f"Detected Object Handle {detectedObjectHandle}"
+        # )
         # get list of values
         sensor_val = np.append(sensor_val, np.linalg.norm(detectedPoint))
-        if x == 4:
-            print(f"{resCode} - {detectedPoint} - {np.linalg.norm(detectedPoint)}")
+        # if x == 4:
+        #     print(f"{resCode} - {detectedPoint} - {np.linalg.norm(detectedPoint)}")
 
         # if np.linalg.norm(detectedPoint) != 0:
         #     print(f"Non-Zero Reading {x}")
