@@ -64,7 +64,8 @@ t = time.time()
 while (time.time() - t) < 15:
     odometer.update_motors()
     gps.update_position()
-    print(f"{odometer} {gps}")
+
+    print(f"{odometer} {gps} {gps.get_position()}")
 
     # Loop Execution
     sensor_val = np.array([])
