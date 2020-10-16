@@ -8,7 +8,7 @@ import numpy as np  # array library
 import sim
 from sensors.odometery import Odometer
 from sensors.position import RobotGPS
-import matplotlib as plt  # used for image plotting
+import matplotlib.pyplot as plt  # used for image plotting
 
 # Pre-Allocation
 saving = False
@@ -34,6 +34,9 @@ gps = RobotGPS(clientID)
 
 sensor_handles = []  # empty list for handles
 sensor_val = np.array([])  # empty array for sensor measurements
+random_positions = []
+accurate_positions = []
+
 
 # orientation of all the sensors:
 sensor_loc = np.array([
@@ -64,8 +67,9 @@ t = time.time()
 while (time.time() - t) < 15:
     odometer.update_motors()
     gps.update_position()
-
-    print(f"{odometer} {gps} {gps.get_position()}")
+    random_positions.append(gps.get_position())
+    accurate_positions.append(gps.get_position(actual=True))
+    print(f"{odometer} {gps}")
 
     # Loop Execution
     sensor_val = np.array([])
@@ -129,6 +133,15 @@ while (time.time() - t) < 15:
 # Post Allocation
 _ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, 0, sim.simx_opmode_streaming)
 _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, 0, sim.simx_opmode_streaming)
+
+rxs = list(map(lambda x: x[0], random_positions))
+rys = list(map(lambda x: x[1], random_positions))
+xs = list(map(lambda x: x[0], accurate_positions))
+ys = list(map(lambda x: x[1], accurate_positions))
+
+plt.plot(rxs, rys, color='r')
+plt.plot(xs, ys, color='b')
+plt.show()
 
 """
 -- This is a very simple EXAMPLE navigation program, which avoids obstacles using the Braitenberg algorithm
