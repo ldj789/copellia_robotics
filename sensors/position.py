@@ -21,13 +21,19 @@ class PositionSensor:
         _, pos = sim.simxGetObjectPosition(self._client_id, self._handle, -1, self._def_op_mode)
         return np.array(pos)
 
+    def get_orientation(self):
+        _, orientation = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, self._def_op_mode)
+        return orientation
+
 
 class RobotGPS:
     def __init__(self,
                  client_id,
+                 frame_name='Pioneer_p3dx',
                  left_motor_name='Pioneer_p3dx_leftMotor',
                  right_motor_name='Pioneer_p3dx_rightMotor',
                  noise=.1):
+        self.frame = PositionSensor(client_id, frame_name)
         self.left_motor_position_sensor = PositionSensor(client_id, left_motor_name)
         self.right_motor_position_sensor = PositionSensor(client_id, right_motor_name)
         self._position_vec = self.set_position()
@@ -51,6 +57,8 @@ class RobotGPS:
             uniform(-self.noise, self.noise), uniform(-self.noise, self.noise), uniform(-self.noise, self.noise)
         ])
 
+    def get_orientation(self):
+        return self.frame.get_orientation()
 
 # --------------
 # TODO:
