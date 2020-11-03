@@ -1,3 +1,6 @@
+# Personal Scenes should go here
+scenes/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -221,4 +224,4 @@ typings/
 
 *.code-workspace
 
-scenes/
+
