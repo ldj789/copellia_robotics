@@ -36,6 +36,7 @@ class RobotGPS:
     def update_position(self):
         rp = self.right_motor_position_sensor.get_position()
         lp = self.left_motor_position_sensor.get_position()
+        print(rp,lp)
         return (rp[0] + lp[0]) / 2, (rp[1] + lp[1]) / 2, (rp[2] + lp[2]) / 2
 
     def get_position(self):
