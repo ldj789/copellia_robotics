@@ -3,6 +3,7 @@
 from datetime import datetime
 import sim
 import numpy as np
+from random import uniform
 
 
 class PositionSensor:
@@ -20,28 +21,44 @@ class PositionSensor:
         _, pos = sim.simxGetObjectPosition(self._client_id, self._handle, -1, self._def_op_mode)
         return np.array(pos)
 
+    def get_orientation(self):
+        _, orientation = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, self._def_op_mode)
+        return orientation
+
 
 class RobotGPS:
     def __init__(self,
                  client_id,
+                 frame_name='Pioneer_p3dx',
                  left_motor_name='Pioneer_p3dx_leftMotor',
-                 right_motor_name='Pioneer_p3dx_rightMotor'):
+                 right_motor_name='Pioneer_p3dx_rightMotor',
+                 noise=.1):
+        self.frame = PositionSensor(client_id, frame_name)
         self.left_motor_position_sensor = PositionSensor(client_id, left_motor_name)
         self.right_motor_position_sensor = PositionSensor(client_id, right_motor_name)
-        self._position_vec = self.update_position()
+        self._position_vec = self.set_position()
+        self.noise = noise
 
     def __str__(self):
         return f"<x: {self._position_vec[0]}, y: {self._position_vec[1]}, z: {self._position_vec[2]}>"
 
-    def update_position(self):
+    def set_position(self):
         rp = self.right_motor_position_sensor.get_position()
         lp = self.left_motor_position_sensor.get_position()
-        print(rp,lp)
-        return (rp[0] + lp[0]) / 2, (rp[1] + lp[1]) / 2, (rp[2] + lp[2]) / 2
+        return np.array([(rp[0] + lp[0]) / 2, (rp[1] + lp[1]) / 2, (rp[2] + lp[2]) / 2])
 
-    def get_position(self):
-        return self._position_vec
+    def update_position(self):
+        self._position_vec = self.set_position()
 
+    def get_position(self, **kwargs):
+        if 'actual' in kwargs and kwargs['actual']:
+            return self._position_vec
+        return self._position_vec + np.array([
+            uniform(-self.noise, self.noise), uniform(-self.noise, self.noise), uniform(-self.noise, self.noise)
+        ])
+
+    def get_orientation(self):
+        return self.frame.get_orientation()
 
 # --------------
 # TODO:

@@ -13,7 +13,6 @@ Steps
 functions:
 __init__ will initialize the odometery system
 
-
 Position/Orientation Estimation
 
 Formulas for linear and angular displacement:
@@ -86,7 +85,7 @@ class Odometer:
 
         # Update odometers
         self.left_odometer += theta_l
-        self.left_odometer += theta_r
+        self.right_odometer += theta_r
 
         # Distance Traveled
         delta_s = (theta_l + theta_r) / 2
@@ -102,8 +101,8 @@ class Odometer:
         """Use new """
         pass
 
-    def get_pose(self):
-        return self.pose
+    def get_position(self):
+        return self.pose[0], self.pose[1], self.pose[2]
 
     # def set_pose(self, new_pose):
     #     self.pose = [x, y, theta]

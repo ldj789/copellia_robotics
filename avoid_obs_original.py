@@ -8,7 +8,7 @@ import numpy as np  # array library
 import sim
 from sensors.odometery import Odometer
 from sensors.position import RobotGPS
-import matplotlib as plt  # used for image plotting
+import matplotlib.pyplot as plt  # used for image plotting
 
 # Pre-Allocation
 saving = False
@@ -29,11 +29,16 @@ else:
 _, left_motor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_leftMotor', sim.simx_opmode_oneshot_wait)
 _, right_motor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_rightMotor', sim.simx_opmode_oneshot_wait)
 
-odometer = Odometer(clientID, .075)
 gps = RobotGPS(clientID)
+gps_start = gps.get_position(actual=True)
+print(gps.get_orientation())
+odometer = Odometer(clientID, 0.098, pose=[gps_start[0], gps_start[1], gps.get_orientation()[2]])
 
 sensor_handles = []  # empty list for handles
 sensor_val = np.array([])  # empty array for sensor measurements
+random_positions = []
+accurate_positions = []
+odometer_positions = []
 
 # orientation of all the sensors:
 sensor_loc = np.array([
@@ -50,7 +55,7 @@ for x in range(1, 16 + 1):
     # build list of handles
     resCode, sensor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_ultrasonicSensor' + str(x),
                                                sim.simx_opmode_oneshot_wait)
-    print(f"{x}, {'Pioneer_p3dx_ultrasonicSensor' + str(x)} - Code: {resCode}")
+    # print(f"{x}, {'Pioneer_p3dx_ultrasonicSensor' + str(x)} - Code: {resCode}")
     sensor_handles.append(sensor_handle)
 
     # get list of values
@@ -64,6 +69,10 @@ t = time.time()
 while (time.time() - t) < 15:
     odometer.update_motors()
     gps.update_position()
+
+    random_positions.append(gps.get_position())
+    accurate_positions.append(gps.get_position(actual=True))
+    odometer_positions.append(odometer.get_position())
     print(f"{odometer} {gps}")
 
     # Loop Execution
@@ -129,50 +138,16 @@ while (time.time() - t) < 15:
 _ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, 0, sim.simx_opmode_streaming)
 _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, 0, sim.simx_opmode_streaming)
 
-"""
--- This is a very simple EXAMPLE navigation program, which avoids obstacles using the Braitenberg algorithm
+rxs = list(map(lambda x: x[0], random_positions))
+rys = list(map(lambda x: x[1], random_positions))
+xs = list(map(lambda x: x[0], accurate_positions))
+ys = list(map(lambda x: x[1], accurate_positions))
+oxs = list(map(lambda x: x[0], odometer_positions))
+oys = list(map(lambda x: x[1], odometer_positions))
 
-if (sim_call_type==sim.syscb_init) then 
-    usensors={-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
-    for i=1,16,1 do
-        usensors[i]=sim.getObjectHandle("Pioneer_p3dx_ultrasonicSensor"..i)
-    end
-    motorLeft=sim.getObjectHandle("Pioneer_p3dx_leftMotor")
-    motorRight=sim.getObjectHandle("Pioneer_p3dx_rightMotor")
-    noDetectionDist=0.5
-    maxDetectionDist=0.2
-    detect={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
-    braitenbergL={-0.2,-0.4,-0.6,-0.8,-1,-1.2,-1.4,-1.6,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}
-    braitenbergR={-1.6,-1.4,-1.2,-1,-0.8,-0.6,-0.4,-0.2,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}
-    v0=2
-end 
+print(oxs, oys)
 
-if (sim_call_type==sim.syscb_cleanup) then 
- 
-end 
-
-if (sim_call_type==sim.syscb_actuation) then 
-    for i=1,16,1 do
-        res,dist=sim.readProximitySensor(usensors[i])
-        if (res>0) and (dist<noDetectionDist) then
-            if (dist<maxDetectionDist) then
-                dist=maxDetectionDist
-            end
-            detect[i]=1-((dist-maxDetectionDist)/(noDetectionDist-maxDetectionDist))
-        else
-            detect[i]=0
-        end
-    end
-    
-    vLeft=v0
-    vRight=v0
-    
-    for i=1,16,1 do
-        vLeft=vLeft+braitenbergL[i]*detect[i]
-        vRight=vRight+braitenbergR[i]*detect[i]
-    end
-    
-    sim.setJointTargetVelocity(motorLeft,vLeft)
-    sim.setJointTargetVelocity(motorRight,vRight)
-end 
-"""
+# plt.plot(rxs, rys, color='r')
+plt.plot(xs, ys, color='b')
+plt.plot(oxs, oys, color='g')
+plt.show()
