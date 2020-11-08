@@ -43,7 +43,7 @@ odometer_positions = []
 # start time
 t = time.time()
 
-while (time.time() - t) < 60:
+while (time.time() - t) < 10:
     odometer.update_motors()
     gps.update_position()
     proximity.update_distances()
@@ -82,11 +82,10 @@ while (time.time() - t) < 60:
 
     time.sleep(0.2)  # loop executes once every 0.2 seconds (= 5 Hz)
 
-# Post Allocation
+# Post Allocation - Stop
 _ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, 0, sim.simx_opmode_streaming)
 _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, 0, sim.simx_opmode_streaming)
 print(vision.raw_image())
-
 
 
 if plotting_flag:
