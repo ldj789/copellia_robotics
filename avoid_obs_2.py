@@ -13,8 +13,12 @@ from sensors.vision import VisionSensorP3DX
 import matplotlib.pyplot as plt  # used for image plotting
 import json
 
+# Initial Variables
+loop_duration = 15  # in seconds
+plotting_flag = False
+saving_data = False
+
 # Pre-Allocation
-saving = False
 PI = np.pi  # constant
 
 sim.simxFinish(-1)  # just in case, close all opened connections
@@ -36,7 +40,7 @@ odometer = Odometer(clientID, 0.098, pose=[gps_start[0], gps_start[1], gps.get_o
 proximity = ProximitySensorP3DX(clientID)
 vision = VisionSensorP3DX(clientID)
 
-plotting_flag = False
+
 random_positions = []
 accurate_positions = []
 odometer_positions = []
@@ -45,7 +49,7 @@ export_data = []
 # start time
 t = time.time()
 
-while (time.time() - t) < 10:
+while (time.time() - t) < loop_duration:
     odometer.update_motors()
     gps.update_position()
     proximity.update_distances()
@@ -58,7 +62,11 @@ while (time.time() - t) < 10:
     min_dist, min_sensor_angle, min_ind = proximity.braitenberg_min()
     print(f"{min_dist} {min_ind}")
     export_data.append({
-            'gps_x':gps.get_position()[0],'gps_y':gps.get_position()[1],'odometer_x':odometer.pose[0],'odometer_y':odometer.pose[1]})
+        'gps_x': gps.get_position()[0],
+        'gps_y': gps.get_position()[1],
+        'odometer_x': odometer.pose[0],
+        'odometer_y': odometer.pose[1]
+    })
     
     # braitenberg steering
     if min_dist < 0.5:
@@ -90,8 +98,10 @@ while (time.time() - t) < 10:
 _ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, 0, sim.simx_opmode_streaming)
 _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, 0, sim.simx_opmode_streaming)
 print(vision.raw_image())
-with open('output.json', 'w') as data_out:
-    data_out.write(json.dumps(export_data))
+
+if saving_data:
+    with open('output.json', 'w') as data_out:
+        data_out.write(json.dumps(export_data))
 
 if plotting_flag:
     rxs = list(map(lambda x: x[0], random_positions))
