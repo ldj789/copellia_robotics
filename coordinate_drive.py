@@ -3,6 +3,7 @@ import time  # used to keep track of time
 import numpy as np  # array library
 
 import sim
+from drive.navigate import turn_to_point
 from sensors.position import RobotGPS
 # from sensors.proximity import ProximitySensorP3DX
 
@@ -32,18 +33,36 @@ _, right_motor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_rightMot
 
 gps = RobotGPS(clientID)
 gps_start = gps.get_position(actual=True)
+
+# proximity = ProximitySensorP3DX(clientID)
+
+destination_1 = coords[2]
+current_pose = gps.get_pose()
+
 print(
     f"Staring Position\n"
-    f"{gps_start}\n"
-    f"{gps.get_orientation()}"
+    f"pose: {current_pose}\n"
+    f"target: {destination_1}\n"
+    f"required turn: {turn_to_point(current_pose, destination_1)}"
 )
-# proximity = ProximitySensorP3DX(clientID)
 
 # start time
 t = time.time()
 
-while (time.time() - t) < 1:
-    # Driving goes here
+while (time.time() - t) < 15:
+    gps.update_position()
+    current_pose = gps.get_pose()
+    steer = turn_to_point(current_pose, destination_1) / np.pi
+
+    v = 1  # forward velocity
+    kp = 0.6  # steering gain
+    vl = v - kp * steer
+    vr = v + kp * steer
+    # print("V_l =", vl)
+    # print("V_r =", vr)
+
+    _ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, vl, sim.simx_opmode_streaming)
+    _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, vr, sim.simx_opmode_streaming)
 
     # loop executes once every 0.1 seconds (= 10 Hz)
     time.sleep(0.1)

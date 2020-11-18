@@ -60,6 +60,15 @@ class RobotGPS:
     def get_orientation(self):
         return self.frame.get_orientation()
 
+    def get_pose(self, **kwargs):
+        if 'actual' in kwargs and kwargs['actual']:
+            return np.array([self._position_vec[0], self._position_vec[1], self.get_orientation()[2]])
+        return np.array([self._position_vec[0], self._position_vec[1], self.get_orientation()[2]]) + np.array([
+            uniform(-self.noise, self.noise), uniform(-self.noise, self.noise), 0
+        ])
+
+
+
 # --------------
 # TODO:
 #   Implement get_orientation
