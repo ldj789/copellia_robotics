@@ -3,11 +3,13 @@ import time  # used to keep track of time
 import numpy as np  # array library
 
 import sim
-from drive.navigate import turn_to_point
+from drive.navigate import turn_to_point, check_destination
 from sensors.position import RobotGPS
 # from sensors.proximity import ProximitySensorP3DX
 
-# Pre-Allocation
+# Initial Variables
+loop_duration = 60  # in seconds
+speed_setting = 1.25
 saving = False
 PI = np.pi  # constant
 
@@ -36,26 +38,38 @@ gps_start = gps.get_position(actual=True)
 
 # proximity = ProximitySensorP3DX(clientID)
 
-destination_1 = coords[2]
+destination_queue = [
+    coords[2],
+    coords[3],
+    coords[2],
+    coords[1]
+]
+
+current_destination = destination_queue.pop(0)
 current_pose = gps.get_pose()
 
 print(
     f"Staring Position\n"
     f"pose: {current_pose}\n"
-    f"target: {destination_1}\n"
-    f"required turn: {turn_to_point(current_pose, destination_1)}"
+    f"target: {current_destination}\n"
+    f"required turn: {turn_to_point(current_pose, current_destination)}"
 )
 
 # start time
 t = time.time()
 
-while (time.time() - t) < 15:
+while (time.time() - t) < loop_duration:
     gps.update_position()
     current_pose = gps.get_pose()
-    steer = turn_to_point(current_pose, destination_1) / np.pi
 
-    v = 1  # forward velocity
-    kp = 0.6  # steering gain
+    current_destination = check_destination(current_pose, current_destination, destination_queue)
+
+    if current_destination is None:
+        v, steer = 0, 0
+    else:
+        v, steer = speed_setting, turn_to_point(current_pose, current_destination) / np.pi
+
+    kp = 2  # steering gain
     vl = v - kp * steer
     vr = v + kp * steer
     # print("V_l =", vl)

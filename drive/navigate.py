@@ -1,25 +1,39 @@
 import numpy as np
 
 
-def turn_to_point(current_pose, dest):
+def turn_to_point(pose, dest):
     """Turn to point from pose
 
     Find the radians to turn in order to face point
 
     In robot currently positive for left and negative for right
 
-    :param current_pose: current pose in x, y, theta (rads)
+    :param pose: current pose in x, y, theta (rads)
     :param dest: destination x, y
     :return: degrees to turn (rads)
     """
-    phi = np.arctan2(dest[1] - current_pose[1], dest[0] - current_pose[0]) / np.pi
-    bearing = current_pose[2] / np.pi
+    # if dest is None:
+    #     return 0
+
+    phi = np.arctan2(dest[1] - pose[1], dest[0] - pose[0]) / np.pi
+    bearing = pose[2] / np.pi
     rotation = phi - bearing
     if rotation > 1:
         rotation -= 2
     elif rotation < -1:
         rotation += 2
     return rotation * np.pi
+
+
+def check_destination(pose, dest, dest_queue, d=.2):
+    """Check proximity to destination and maybe update pathing"""
+    if dest is None:
+        return None
+
+    dist = np.sqrt((pose[0] - dest[0])**2 + (pose[1] - dest[1])**2)
+    if dist < d:
+        dest = dest_queue.pop(0) if len(dest_queue) > 0 else None
+    return dest
 
 
 """
@@ -49,4 +63,4 @@ if __name__ == "__main__":
 
     # sample 4
     # [0, 0, -0.5], [0, 1] -> -1 or 1
-    assert(np.abs(turn_to_point([0, 0, -0.5 * np.pi], [0, 1])) - 1  * np.pi < 0.01)
+    assert(np.abs(turn_to_point([0, 0, -0.5 * np.pi], [0, 1])) - 1 * np.pi < 0.01)
