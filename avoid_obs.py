@@ -14,9 +14,9 @@ import matplotlib.pyplot as plt  # used for image plotting
 import json
 
 # Initial Variables
-loop_duration = 15  # in seconds
+loop_duration = 30  # in seconds
 plotting_flag = False
-saving_data = False
+saving_data = True
 
 # Pre-Allocation
 PI = np.pi  # constant
@@ -49,7 +49,7 @@ export_data = []
 # start time
 t = time.time()
 
-while (time.time() - t) < 10:
+while (time.time() - t) < loop_duration:
     odometer.update_motors()
     gps.update_position()
     proximity.update_distances()
@@ -69,7 +69,7 @@ while (time.time() - t) < 10:
     })
     
     # braitenberg steering
-    if min_dist < 0.5:
+    if min_dist < 0.1:
         steer = 1 / min_sensor_angle
     else:
         steer = 0
@@ -82,8 +82,8 @@ while (time.time() - t) < 10:
     #
     # kp = gain_map.get(int(time.time() - t) // 60)
 
-    v = 1  # forward velocity
-    kp = 0.6  # steering gain
+    v = 0.5  # forward velocity
+    kp = 0.4  # steering gain
     vl = v + kp * steer
     vr = v - kp * steer
     # print("V_l =", vl)
