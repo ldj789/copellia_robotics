@@ -68,7 +68,7 @@ while (time.time() - t) < loop_duration:
         'odometer_y': odometer.pose[1]
     })
     
-    # braitenberg steering
+    # Braitenberg steering
     if min_dist < 0.5:
         steer = 1 / min_sensor_angle
     else:
@@ -84,8 +84,8 @@ while (time.time() - t) < loop_duration:
 
     v = 1  # forward velocity
     kp = 0.6  # steering gain
-    vl = v + kp * steer
-    vr = v - kp * steer
+    vl = v - kp * steer
+    vr = v + kp * steer
     # print("V_l =", vl)
     # print("V_r =", vr)
 

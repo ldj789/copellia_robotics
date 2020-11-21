@@ -44,7 +44,11 @@ class ProximitySensorP3DX:
                     self.client_id, handle, self.op_mode
                 )
 
-            self._sensor_vals[i] = np.linalg.norm(det_point)
+            # print(f"i: {i}\n"
+            #       f"det_point: {det_point}\n"
+            #       f"Norm {np.linalg.norm(det_point)}")
+
+            self._sensor_vals[i] = np.linalg.norm(det_point) if np.linalg.norm(det_point) > 1e-10 else np.Inf
 
     def braitenberg_min(self):
         """Braitenberg pathing by avoiding the nearest wall
@@ -65,6 +69,7 @@ class ProximitySensorP3DX:
         """
         # square the values of front-facing sensors 1-8
         sensor_sqs = self._sensor_vals[0:8] * self._sensor_vals[0:8]
+        # print({i: sensor_sqs[i] for i in range(len(sensor_sqs))})
         min_ind = np.where(sensor_sqs == np.min(sensor_sqs))
         min_ind = min_ind[0][0]
         return self._sensor_vals[min_ind], self.sensor_locs[min_ind], min_ind

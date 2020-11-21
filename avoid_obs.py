@@ -14,9 +14,9 @@ import matplotlib.pyplot as plt  # used for image plotting
 import json
 
 # Initial Variables
-loop_duration = 30  # in seconds
+loop_duration = 60  # in seconds
 plotting_flag = False
-saving_data = True
+saving_data = False
 
 # Pre-Allocation
 PI = np.pi  # constant
@@ -68,8 +68,8 @@ while (time.time() - t) < loop_duration:
         'odometer_y': odometer.pose[1]
     })
     
-    # braitenberg steering
-    if min_dist < 0.1:
+    # Braitenberg steering
+    if min_dist < 0.4:
         steer = 1 / min_sensor_angle
     else:
         steer = 0
@@ -84,8 +84,8 @@ while (time.time() - t) < loop_duration:
 
     v = 0.5  # forward velocity
     kp = 0.4  # steering gain
-    vl = v + kp * steer
-    vr = v - kp * steer
+    vl = v - kp * steer
+    vr = v + kp * steer
     # print("V_l =", vl)
     # print("V_r =", vr)
 
@@ -97,7 +97,7 @@ while (time.time() - t) < loop_duration:
 # Post Allocation - Stop
 _ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, 0, sim.simx_opmode_streaming)
 _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, 0, sim.simx_opmode_streaming)
-print(vision.raw_image())
+# print(vision.raw_image())
 
 if saving_data:
     with open('output.json', 'w') as data_out:
