@@ -83,10 +83,6 @@ while (time.time() - t) < loop_duration:
     _ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, vl, sim.simx_opmode_streaming)
     _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, vr, sim.simx_opmode_streaming)
     
-    
-
-
-    
     export_data.append({
         'actual_x': gps.get_position(actual=True)[0],
         'actual_y': gps.get_position(actual=True)[1],
