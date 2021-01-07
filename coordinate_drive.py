@@ -99,7 +99,7 @@ while (time.time() - t) < loop_duration:
 _ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, 0, sim.simx_opmode_streaming)
 _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, 0, sim.simx_opmode_streaming)
 
-#save data
+# save data
 if saving_data:
     with open('output.json', 'w') as data_out:
         data_out.write(json.dumps(export_data))
