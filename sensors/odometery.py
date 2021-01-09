@@ -8,7 +8,7 @@ Steps
 1 Initialize Odometery system
 2 Obtain angular displacement from the speed of each joint
 3 Update value of odometer using
-4 Update the position of the robot
+4 Update the localization of the robot
 
 functions:
 __init__ will initialize the odometery system

@@ -99,13 +99,13 @@ sim_modelproperty_not_cuttable                    =0x0010
 sim_modelproperty_not_dynamic                    =0x0020
 sim_modelproperty_not_respondable                =0x0040 # cannot be selected if sim_modelproperty_not_dynamic is not selected 
 sim_modelproperty_not_reset                        =0x0080 # Model is not reset at simulation end. This flag is cleared at simulation end 
-sim_modelproperty_not_visible                    =0x0100 # Whole model is invisible independent of local visibility settings 
+sim_modelproperty_not_visible                    =0x0100 # Whole model is invisible independent of localization visibility settings
 sim_modelproperty_not_model                        =0xf000 # object is not a model 
 
 
 # Check the documentation instead of comments below!! 
 # Following messages are dispatched to the Lua-message container 
-sim_message_ui_button_state_change  =0    # a UI button slider etc. changed (due to a user's action). aux[0]=UI handle aux[1]=button handle aux[2]=button attributes aux[3]=slider position (if slider) 
+sim_message_ui_button_state_change  =0    # a UI button slider etc. changed (due to a user's action). aux[0]=UI handle aux[1]=button handle aux[2]=button attributes aux[3]=slider localization (if slider)
 sim_message_reserved9               =1    # Do not use 
 sim_message_object_selection_changed=2
 sim_message_reserved10                =3    # do not use 
@@ -295,7 +295,7 @@ sim_dlgstyle_input          =1
 sim_dlgstyle_ok             =2
 sim_dlgstyle_ok_cancel      =3
 sim_dlgstyle_yes_no         =4
-sim_dlgstyle_dont_center    =32# can be combined with one of above values. Only with this flag can the position of the related UI be set just after dialog creation  
+sim_dlgstyle_dont_center    =32# can be combined with one of above values. Only with this flag can the localization of the related UI be set just after dialog creation
 
  # Generic dialog return values 
 sim_dlgret_still_open   =0
@@ -325,10 +325,10 @@ sim_pathproperty_keep_x_up                            =0x0800
 sim_drawing_points          =0            # 3 values per point (point size in pixels) 
 sim_drawing_lines            =1            # 6 values per line (line size in pixels) 
 sim_drawing_triangles        =2            # 9 values per triangle 
-sim_drawing_trianglepoints    =3            # 6 values per point (3 for triangle position 3 for triangle normal vector) (triangle size in meters) 
-sim_drawing_quadpoints        =4            # 6 values per point (3 for quad position 3 for quad normal vector) (quad size in meters) 
-sim_drawing_discpoints        =5            # 6 values per point (3 for disc position 3 for disc normal vector) (disc size in meters) 
-sim_drawing_cubepoints        =6          # 6 values per point (3 for cube position 3 for cube normal vector) (cube size in meters) 
+sim_drawing_trianglepoints    =3            # 6 values per point (3 for triangle localization 3 for triangle normal vector) (triangle size in meters)
+sim_drawing_quadpoints        =4            # 6 values per point (3 for quad localization 3 for quad normal vector) (quad size in meters)
+sim_drawing_discpoints        =5            # 6 values per point (3 for disc localization 3 for disc normal vector) (disc size in meters)
+sim_drawing_cubepoints        =6          # 6 values per point (3 for cube localization 3 for cube normal vector) (cube size in meters)
 sim_drawing_spherepoints    =7          # 3 values per point (sphere size in meters) 
 
 # following can be or-combined 
@@ -363,11 +363,11 @@ sim_banner_fullyfacingcamera        =0x00100 # If specified the banner will alwa
 sim_banner_backfaceculling            =0x00200 # If specified the banner will only be visible from one side 
 sim_banner_keepsamesize                =0x00400 # If specified the banner will always appear in the same size. In that case size represents the character height in pixels 
 sim_banner_bitmapfont                =0x00800 # If specified a fixed-size bitmap font is used. The text will also always fully face the camera and be right 
-                                             # to the specified position. Bitmap fonts are not clickable 
+                                             # to the specified localization. Bitmap fonts are not clickable
 
 
 # particle objects following are mutually exclusive 
-sim_particle_points1        =0  # 6 values per point (pt1 and pt2. Pt1 is start position pt2-pt1 is the initial velocity vector). i
+sim_particle_points1        =0  # 6 values per point (pt1 and pt2. Pt1 is start localization pt2-pt1 is the initial velocity vector). i
                                 #Point is 1 pixel big. Only appearance is a point internally handled as a perfect sphere 
 sim_particle_points2        =1    # 6 values per point. Point is 2 pixel big. Only appearance is a point internally handled as a perfect sphere 
 sim_particle_points4        =2    # 6 values per point. Point is 4 pixel big. Only appearance is a point internally handled as a perfect sphere 

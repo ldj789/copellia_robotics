@@ -7,6 +7,8 @@ import sim
 from drive.navigate import turn_to_point, check_destination
 from sensors.position import RobotGPS
 from sensors.odometery import Odometer
+from localization.kalman import GpsOdometerKf
+
 # from sensors.proximity import ProximitySensorP3DX
 
 # Initial Variables
@@ -40,6 +42,7 @@ _, right_motor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_rightMot
 gps = RobotGPS(clientID)
 gps_start = gps.get_position(actual=True)
 odometer = Odometer(clientID, 0.098, pose=[gps_start[0], gps_start[1], gps.get_orientation()[2]])
+
 # proximity = ProximitySensorP3DX(clientID)
 
 destination_queue = [
@@ -51,6 +54,7 @@ destination_queue = [
 
 current_destination = destination_queue.pop(0)
 current_pose = gps.get_pose()
+kf = GpsOdometerKf(gps, odometer, pose=current_pose)
 
 print(
     f"Staring Position\n"
@@ -65,6 +69,7 @@ t = time.time()
 while (time.time() - t) < loop_duration:
     gps.update_position()
     odometer.update_motors()
+    kf.update()
     current_pose = gps.get_pose()
 
     current_destination = check_destination(current_pose, current_destination, destination_queue)
@@ -90,7 +95,8 @@ while (time.time() - t) < loop_duration:
         'odometer_y': odometer.pose[1],
         'gps_x': gps.get_position()[0],
         'gps_y': gps.get_position()[1],
-        
+        'kf_x': kf.get_position()[0],
+        'kf_y': kf.get_position()[1],
     })
     # loop executes once every 0.1 seconds (= 10 Hz)
     time.sleep(0.1)
