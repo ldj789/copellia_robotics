@@ -60,6 +60,7 @@ class Odometer:
 
         self.pose = kwargs['pose'] if 'pose' in kwargs else [0, 0, 0]
         self.last_time = datetime.now()
+        self.velocity = 0
 
     def get_b_parameter(self):
         _, rr = sim.simxGetObjectPosition(self.client_id, self.right_motor_handle, -1, sim.simx_opmode_oneshot_wait)
@@ -90,6 +91,9 @@ class Odometer:
         # Distance Traveled
         delta_s = (theta_l + theta_r) / 2
 
+        # Velocity
+        self.velocity = delta_s / delta_time
+
         # Change in Rotation
         delta_theta = (theta_r - theta_l) / (2 * self.b)  # b = width of cart
 
@@ -103,6 +107,9 @@ class Odometer:
 
     def get_position(self):
         return self.pose[0], self.pose[1], self.pose[2]
+
+    def get_velocity(self):
+        return self.velocity
 
     # def set_pose(self, new_pose):
     #     self.pose = [x, y, theta]

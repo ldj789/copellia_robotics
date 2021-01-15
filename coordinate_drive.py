@@ -41,7 +41,7 @@ _, right_motor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_rightMot
 
 gps = RobotGPS(clientID)
 gps_start = gps.get_position(actual=True)
-odometer = Odometer(clientID, 0.098, pose=[gps_start[0], gps_start[1], gps.get_orientation()[2]])
+odometer = Odometer(clientID, 0.097, pose=[gps_start[0], gps_start[1], gps.get_orientation()[2]])
 
 # proximity = ProximitySensorP3DX(clientID)
 
@@ -97,6 +97,7 @@ while (time.time() - t) < loop_duration:
         'gps_y': gps.get_position()[1],
         'kf_x': kf.get_position()[0],
         'kf_y': kf.get_position()[1],
+        'v': odometer.get_velocity()
     })
     # loop executes once every 0.1 seconds (= 10 Hz)
     time.sleep(0.1)
