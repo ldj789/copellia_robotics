@@ -1,3 +1,4 @@
+import time
 import numpy as np
 
 
@@ -19,8 +20,6 @@ class GpsOdometerKf:
             self.position = [kwargs["pose"][0], kwargs["pose"][1]]
 
         self.prior_odometer_position = self.odometer.get_position()
-        # initialize variance
-        # TODO: initialize variance
 
         # initialize matrices for kf calculation
         self.P = np.identity(2)  # keep
@@ -43,15 +42,18 @@ class GpsOdometerKf:
         # curr_dat['theta_sensor'] - prior_dat['theta_sensor']])
 
         # r_control = 10e-2
+        # Odometer
         J_control = np.array([
             [1, 0],
-            [0, 1]])
+            [0, 1]
+        ])
 
         # r_sensor = 10e-2
+        # GPS
         J_sensor = np.array([
             [1, 0],
-            [0, 1]]
-        )
+            [0, 1]
+        ])
 
         # What to plugin to alpha 1-4?
         # alpha_1, alpha_2, alpha_3, alpha_4 = 10e-7, 15e-7, 5e-7, 20e-7
@@ -59,21 +61,17 @@ class GpsOdometerKf:
         # gps uniform(-.1, .1)
         # q_alphas are for odometer, what is a calculation for these?
 
-        alpha_1, alpha_2, alpha_3, alpha_4 = (10,) * 4
-        alpha_odometer_1, alpha_odometer_2, alpha_odometer_3, alpha_odometer_4 = (1,) * 4
+        alpha_sensor_1, alpha_sensor_2 = (.05,) * 2
+        alpha_odometer_1, alpha_odometer_2 = (.01 * self.odometer.get_velocity()) * 2
 
-        R_t_1_1 = alpha_1 + alpha_2
-        R_t_2_2 = alpha_3 + alpha_4
         R = np.array([
-            [R_t_1_1, 0],
-            [0, R_t_2_2]
+            [alpha_sensor_1, 0],
+            [0, alpha_sensor_2]
         ])
 
-        Q_t_1_1 = alpha_odometer_1 + alpha_odometer_2
-        Q_t_2_2 = alpha_odometer_3 + alpha_odometer_4
         Q = np.array([
-            [Q_t_1_1, 0],
-            [0, Q_t_2_2]
+            [alpha_odometer_1, 0],
+            [0, alpha_odometer_2]
         ])
 
         # === Predict ===
