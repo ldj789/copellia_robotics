@@ -3,7 +3,13 @@ import webbrowser
 from flask import Flask, escape, request, render_template
 
 template_dir = os.path.join("flask", "html")
-app = Flask(__name__, template_folder=template_dir)
+static_dir = os.path.join("/flask")
+app = Flask(
+    __name__,
+    template_folder=template_dir,
+    static_url_path=static_dir,
+    static_folder='flask'
+)
 
 
 @app.route('/')
@@ -22,7 +28,13 @@ def test(my_int):
     return f'Here is the test page - num: {my_int}'
 
 
-webbrowser.open("http://localhost:5000/?name=Drew")
+@app.route('/viz')
+def viz():
+    return render_template('viz_development.html')
+
+
+# webbrowser.open("http://localhost:5000/?name=Drew")
+webbrowser.open("http://localhost:5000/viz")
 
 
 if __name__ == '__main__':
