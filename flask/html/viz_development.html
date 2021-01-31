@@ -6,9 +6,14 @@
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Viz</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-  <svg id="plot"></svg>
+  <h4>viz development</h4>
+  <div class="no_stretch">
+      <svg id="plot"></svg>
+  </div>
+
 
   <script src="https://d3js.org/d3.v6.min.js"></script>
   <script src="{{ url_for('static', filename='js/viz_dev.js') }}"></script>
