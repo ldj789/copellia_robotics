@@ -33,7 +33,13 @@ def viz():
     return render_template('viz_development.html')
 
 
+@app.route('/vizEx1')
+def viz_example1():
+    return render_template('viz_example-1.html')
+
+
 # webbrowser.open("http://localhost:5000/?name=Drew")
+# webbrowser.open("http://localhost:5000/vizEx1")
 webbrowser.open("http://localhost:5000/viz")
 
 
