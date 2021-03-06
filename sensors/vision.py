@@ -58,7 +58,8 @@ class VisionSensorP3DX:
         if self.client_id != 1:
             print('Getting images')
             dirname = "images\\"
-            os.makedirs(dirname)
+            if not os.path.isdir('images'):
+                os.makedirs(dirname)
             while self.client_id != 1:
                 image = self.raw_image()
                 resolution = self.image_resolution()
