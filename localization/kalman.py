@@ -62,7 +62,7 @@ class GpsOdometerKf:
         # q_alphas are for odometer, what is a calculation for these?
 
         alpha_sensor_1, alpha_sensor_2 = (.05,) * 2
-        alpha_odometer_1, alpha_odometer_2 = (.01 * self.odometer.get_velocity()) * 2
+        alpha_odometer_1, alpha_odometer_2 = (.01 * self.odometer.get_velocity(),) * 2
 
         R = np.array([
             [alpha_sensor_1, 0],
