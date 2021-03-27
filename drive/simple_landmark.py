@@ -62,10 +62,12 @@ while (time.time() - t) < LOOP_DURATION:
     # print(f"{odometer} {gps}")
 
     min_dist, min_sensor_angle, min_ind = proximity.braitenberg_min()
-    print(f"{min_dist} {min_ind}")
+    # print(f"{min_dist} {min_ind}")
 
-    landmarks.
-
+    print(
+        f"Landmark Ranges\n"
+        f"{landmarks.landmark_ranges()}"
+    )
 
     export_data.append({
         'gps_x': gps.get_position()[0],
