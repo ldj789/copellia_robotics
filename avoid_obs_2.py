@@ -22,23 +22,23 @@ saving_data = False
 PI = np.pi  # constant
 
 sim.simxFinish(-1)  # just in case, close all opened connections
-clientID = sim.simxStart('127.0.0.1', 19999, True, True, 5000, 5)
-if clientID != -1:  # check if client connection successful
+clientId = sim.simxStart('127.0.0.1', 19999, True, True, 5000, 5)
+if clientId != -1:  # check if client connection successful
     print('Connected to remote API server')
 else:
     print('Connection not successful')
     sys.exit('Could not connect')
 
 # retrieve motor  handles
-_, left_motor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_leftMotor', sim.simx_opmode_oneshot_wait)
-_, right_motor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_rightMotor', sim.simx_opmode_oneshot_wait)
+_, left_motor_handle = sim.simxGetObjectHandle(clientId, 'Pioneer_p3dx_leftMotor', sim.simx_opmode_oneshot_wait)
+_, right_motor_handle = sim.simxGetObjectHandle(clientId, 'Pioneer_p3dx_rightMotor', sim.simx_opmode_oneshot_wait)
 
-gps = RobotGPS(clientID)
+gps = RobotGPS(clientId)
 gps_start = gps.get_position(actual=True)
 print(gps.get_orientation())
-odometer = Odometer(clientID, 0.098, pose=[gps_start[0], gps_start[1], gps.get_orientation()[2]])
-proximity = ProximitySensorP3DX(clientID)
-vision = VisionSensorP3DX(clientID)
+odometer = Odometer(clientId, 0.098, pose=[gps_start[0], gps_start[1], gps.get_orientation()[2]])
+proximity = ProximitySensorP3DX(clientId)
+vision = VisionSensorP3DX(clientId)
 
 
 random_positions = []
@@ -89,14 +89,14 @@ while (time.time() - t) < loop_duration:
     # print("V_l =", vl)
     # print("V_r =", vr)
 
-    _ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, vl, sim.simx_opmode_streaming)
-    _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, vr, sim.simx_opmode_streaming)
+    _ = sim.simxSetJointTargetVelocity(clientId, left_motor_handle, vl, sim.simx_opmode_streaming)
+    _ = sim.simxSetJointTargetVelocity(clientId, right_motor_handle, vr, sim.simx_opmode_streaming)
 
     time.sleep(0.2)  # loop executes once every 0.2 seconds (= 5 Hz)
 
 # Post Allocation - Stop
-_ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, 0, sim.simx_opmode_streaming)
-_ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, 0, sim.simx_opmode_streaming)
+_ = sim.simxSetJointTargetVelocity(clientId, left_motor_handle, 0, sim.simx_opmode_streaming)
+_ = sim.simxSetJointTargetVelocity(clientId, right_motor_handle, 0, sim.simx_opmode_streaming)
 print(vision.raw_image())
 
 if saving_data:
