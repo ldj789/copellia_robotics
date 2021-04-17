@@ -1,5 +1,6 @@
 #%%
 import sim
+import sys
 
 from sensors.vision import VisionSensorP3DX
 
