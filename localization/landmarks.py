@@ -13,6 +13,18 @@ import sim
 import numpy as np
 
 
+class Landmark:
+    """Helper class for Robot Landmarks"""
+    def __init__(self, client_id, handle):
+        self._client_id = client_id
+        self._def_op_mode = sim.simx_opmode_oneshot_wait
+        self._handle = handle
+        _, self.position = sim.simxGetObjectPosition(self._client_id, self._handle, -1, self._def_op_mode)
+
+    def update_position(self, **kwargs):
+        _, self.position = sim.simxGetObjectPosition(self._client_id, self._handle, -1, self._def_op_mode)
+
+
 class RobotLandmarks:
     def __init__(self, client_id, **kwargs):
         self._client_id = client_id
@@ -37,8 +49,21 @@ class RobotLandmarks:
             for lm in kwargs['landmark_frames']:
                 self.append_landmark_from_frame(lm)
 
+        self.landmarks = [Landmark(self._client_id, handle) for handle in self._landmark_handles]
+
     def __str__(self):
         return "<" + ", ".join([str(lm) for lm in self._landmark_handles]) + ">"
+
+    def __len__(self):
+        return len(self._landmark_handles)
+
+    # TODO complete
+    def add(self):
+        raise NotImplementedError
+
+    # TODO complete
+    def remove(self):
+        raise NotImplementedError
 
     def append_landmark_from_handle(self, lm_handle):
         self._landmark_handles.append(lm_handle)
@@ -68,14 +93,17 @@ class RobotLandmarks:
         theta = np.arctan2(dy, dx) - robot_pov_pos[2]
         return np.array([d, theta])
 
-    def landmark_ranges(self):
+    def landmark_ranges(self, **kwargs):
+        """Get range and angle for each landmark"""
         # robot position -  private to this function
         robot_pov_pos = self.get_robot_position()
         print(robot_pov_pos)
-        res = []
+        # res = []
+        res = np.zeros((0, 2))
         for i, lm_handle in enumerate(self._landmark_handles):
             _, landmark_pos = sim.simxGetObjectPosition(self._client_id, lm_handle, -1, self._def_op_mode)
-            res.append(self.calculate_range(robot_pov_pos, landmark_pos))
+            # res.append(self.calculate_range(robot_pov_pos, landmark_pos))
+            np.vstack(res, self.calculate_range(robot_pov_pos, landmark_pos))
         return res
 
     def is_visible(self, lm):
@@ -89,40 +117,37 @@ class RobotLandmarks:
         """
         return filter(self.is_visible, self._landmark_handles)
 
-    def find_lm_pos(self, lm):
-        """Find relative position of landmarks
+    # TODO: move doc string note to calculate range or Kalman
+    # def find_lm_pos(self, lm):
+    #     """Find relative position of landmarks
+    #
+    #     calculate distance from robot to landmark
+    #     calculate angle from robot to landmark
+    #     d = pi_2_pi(math.atan2(dy, dx) - xTrue[2, 0])
+    #     angle = pi_2_pi(math.atan2(dy, dx) - xTrue[2, 0])
+    #     add noise
+    #     convert from polar to euclidean w.r.t. robots position (robot is the origin)
+    #     zp = np.zeros((2, 1))
+    #
+    #     zp[0, 0] = x[0, 0] + z[0] * math.cos(x[2, 0] + z[1])
+    #     zp[1, 0] = x[1, 0] + z[0] * math.sin(x[2, 0] + z[1])
+    #
+    #     :returns:
+    #     """
+    #     # use robot position
+    #     robot_pos = self.get_robot_position()
+    #
+    #     res = []
+    #     for lm in self._landmark_handles:
+    #         res.append(lm.get_polar_position())
+    #     lm_abs_pos = lm
+    #     raise NotImplementedError
 
-        calculate distance from robot to landmark
-        calculate angle from robot to landmark
-        d = pi_2_pi(math.atan2(dy, dx) - xTrue[2, 0])
-        angle = pi_2_pi(math.atan2(dy, dx) - xTrue[2, 0])
-        add noise
-        convert from polar to euclidean w.r.t. robots position (robot is the origin)
-        zp = np.zeros((2, 1))
+    def get_landmark_positions(self):
+        """Get a list of landmark (x, y) coordinates"""
+        return [np.array(lm.position) for lm in self.landmarks]
 
-        zp[0, 0] = x[0, 0] + z[0] * math.cos(x[2, 0] + z[1])
-        zp[1, 0] = x[1, 0] + z[0] * math.sin(x[2, 0] + z[1])
-
-        :returns:
-        """
-        # use robot position
-        robot_pos = self.get_robot_position()
-
-        res = []
-        for lm in self._landmark_handles:
-            res.append(lm.get_polar_position())
-        lm_abs_pos = lm
-        raise NotImplementedError
-
-    def update_positions(self):
-        for lm in self._landmark_handles:
-            lm.position = lm.get_position()
-
-
-# TODO Have landmark correct positions
-# def get_position(self, **kwargs):
-#     _, pos = sim.simxGetObjectPosition(self._client_id, self._handle, -1, self._def_op_mode)
-#     if 'update' in kwargs and kwargs['update']:
-#         self._position = pos
-#     else:
-#         return pos
+    def update_landmark_positions(self):
+        """update landmark positions"""
+        for lm in self.landmarks:
+            lm.update_position()
