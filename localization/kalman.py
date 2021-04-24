@@ -134,46 +134,59 @@ class LandmarkOdometerKf:
         self.H = np.identity(2)  # keep
 
     def update(self):
-        # Retrieve odometry update, (x, y, theta)
-        odometer_position = np.array(self.odometer.get_position())
+        """Update - Performs the Kalman filter update
+
+         This is to be called from running robot event loop and operates
+         by first grabbing the updated motion model position of the robot from
+         the odometer class. This is the predict step and done with kf_predict.
+         Next the each landmark is evaluated for an innovation and gain to
+         update the robot position
+
+         Completes with inplace update of self.pose
+        """
         # kf_x = np.vstack((odometer_position, *[self.landmarks.landmark_positions]))
-        kf_x = np.hstack((odometer_position, *[self.landmarks.get_landmark_positions()])).T
-        u_t_control = np.array(
-            [odometer_position[0] - self.prior_odometer_position[0],
-             odometer_position[1] - self.prior_odometer_position[1]]
-        )
+        kf_x = np.hstack((self.pose, *[self.landmarks.get_landmark_positions()])).T
         # Predict
-        x_pred, PEst, G, Fx = self.kf_predict(u_t_control, PEst, u)
-        kf_x[0:3] = x_pred
+        kf_x, PEst, G, Fx = self.kf_predict(kf_x, PEst, u)
+
         # Update
-        # x_pred, PEst = self.kf_update(x_pred, PEst)
+        # kf_x, PEst = self.kf_update(x_pred, PEst)
 
         # Review
         print(
-            f"x_pred: {x_pred}"
+            f"x_pred: {kf_x[0:3]}"
             # # f"\nP {P}"
             # f"\ny: {y}"
             # f"\n"
         )
 
         # Save to self
-        self.pose = [x_pred[0], x_pred[1], self.pose[2]]
-        self.prior_odometer_position = odometer_position
-        # return x_pred, PEst
+        self.pose = kf_x[0:3]
 
-    def kf_predict(self, u_t_control):
+    def kf_predict(self, kf_x):
         """
         Performs the prediction of state based upon odometery motion model
 
-        :param u_t_control: update to position known from controls, nx1 state vector
+        :param kf_x: update to position known from controls, nx1 state vector
         # :param xEst: nx1 state vector
         # :param PEst: nxn covariacne matrix
         # :param u:    2x1 control vector
         :returns:    predicted state vector, predicted covariance, jacobian of control vector, transition fx
         """
+        # Retrieve odometry update, (x, y, theta)
+        odometer_position = np.array(self.odometer.get_position())
+
+        # u_t_control is the update to odometery motion model at time t (now)
+        u_t_control = np.array(
+            [odometer_position[0] - self.prior_odometer_position[0],
+             odometer_position[1] - self.prior_odometer_position[1]]
+        )
+
+        # update prior odometer position
+        self.prior_odometer_position = odometer_position
+
         # predict state update
-        x_pred_control = self.pose + u_t_control
-        # X = x_pred_control.vstack(self.landmarks.landmark_ranges_map())
+        kf_x[0:3] = kf_x[0:3] + u_t_control
 
         # predict covariance
         # P = G.T @ P @ G + Cx
@@ -194,22 +207,22 @@ class LandmarkOdometerKf:
         # sigma = G*sigma*G.T + Noise
         # Upper left corner of covariance is updated
         PEst[0:self.S, 0:self.S] = G.T @ PEst[0:self.S, 0:self.S] @ G + Fx.T @ Cx @ Fx
-        return x_pred_control, PEst, G, Fx
+        return kf_x, PEst, G, Fx
 
     def kf_update(self, kf_x, PEst):
-        """
-            Performs the update step of EKF SLAM
+        """Performs the update step of EKF SLAM
 
-            :param kf_x:  nx1 the predicted pose of the system and the pose of the landmarks
-            :param PEst:  nxn the predicted covariance
-            :param u:     2x1 the control function
-            :param z:     the measurements read at new position
-            :returns:     the updated state and covariance for the system
-            """
-        # TODO: Create initP: 2x2 an identity matrix acting as the initial covariance
-        n_v = self.landmarks.visible_landmarks()
+        :param kf_x:  nx1 the predicted pose of the system and the pose of the landmarks
+        :param PEst:  nxn the predicted covariance
+        :param u:     2x1 the control function
+        :param z:     the measurements read at new position
+        :returns:     the updated state and covariance for the system
+        """
+        # TODO visibility update
         z = self.landmarks.landmark_ranges()
-        # TODO n_v becomes length of z after visibility update
+        n_v = len(z)
+
+        # TODO: Create initP: 2x2 an identity matrix acting as the initial covariance
         initP = np.eye(len(n_v))
 
         for iz in range(len(z[:, 0])):  # for each landmark
@@ -226,16 +239,50 @@ class LandmarkOdometerKf:
             #     xEst = xAug
             #     PEst = PAug
 
-            # TODO
-            #  1) Return specific landmark state
-            #  2) Calculate innovation
+            lm_x = self.kf_get_lm_position_from_state(kf_x, iz)
+            # y, S, H = calc_innovation(lm_x, xEst, PEst, z[iz, 0:2], minid)
+            y = self.kf_calculate_innovation(lm_x, z[iz, 0:2], kf_x[0:3])
 
-            lm_x = get_LM_Pos_from_state(kf_x, iz)
-            y, S, H = calc_innovation(lm_x, xEst, PEst, z[iz, 0:2], minid)
-
+            # TODO:
+            #  0) ensure shape of z per calling instructions on line 244
+            #   should look like
+            #   [[4, .24],
+            #    [8, 1.57],
+            #    [5, -2]]
+            #  1) run update with gain of 0.5
+            #  2) propagate covariance calculations and review dynamic gain
+            #  3) drop pi_2_pi
             K = (PEst @ H.T) @ np.linalg.inv(S)  # Calculate Kalman Gain, to start 0.5
             xEst = xEst + (K @ y)
             PEst = (np.eye(len(xEst)) - (K @ H)) @ PEst
 
         xEst[2] = pi_2_pi(xEst[2])
         return xEst, PEst
+
+    @staticmethod
+    def kf_get_lm_position_from_state(kf_x, iz):
+        """
+            (a, a, a, b, b, c, c, d, d, e, e)
+        :return: lm_x (x, y) of the landmark to be returned from kf_x
+        """
+        return kf_x[3+iz*2, 4+iz*2]
+
+    @staticmethod
+    def kf_calculate_innovation(lm_x, lm_range, pose):
+        """Calculate difference is position between current odometery pose
+        and that working back from observed landmark and its known position
+
+        :pose: (x, y, theta) for robot a.k.a. kf_x[0:3]
+        :lm_x: (x, y) for landmark (absolute)
+        :lm_range: (d, theta) for landmark (observed)
+        :return: (dx, dy)
+        """
+        u = (
+            (lm_x[0] - lm_range[0] * np.cos(lm_range[1])),
+            (lm_x[1] - lm_range[0] * np.sin(lm_range[1]))
+        )
+        print(u)
+        return (
+            (u[0] - pose[0]),
+            (u[1] - pose[1])
+        )
