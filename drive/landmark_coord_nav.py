@@ -6,11 +6,13 @@ import time  # used to keep track of time
 import numpy as np  # array library
 
 import sim
+
 from sensors.odometery import Odometer
 from sensors.position import RobotGPS
 from sensors.proximity import ProximitySensorP3DX
 from sensors.vision import VisionSensorP3DX
 from localization.landmarks import RobotLandmarks
+from localization.kalman import LandmarkOdometerKf
 import matplotlib.pyplot as plt  # used for image plotting
 import json
 
@@ -20,6 +22,14 @@ PLOTTING_FLAG = False
 SAVING_DATA = False
 
 LANDMARK_FRAMES = ["LM_Blue", "LM_Green", "LM_Red", "LM_Yellow"]
+
+# Coordinates to drive along
+coords = {
+    1: (-3.9, -0.5),
+    2: (-3.9, 3.9),
+    3: (3.5, 3.9),
+}
+
 
 sim.simxFinish(-1)  # just in case, close all opened connections
 clientId = sim.simxStart('127.0.0.1', 19999, True, True, 5000, 5)
@@ -41,12 +51,21 @@ print(gps.get_orientation())
 odometer = Odometer(clientId, 0.098, pose=[gps_start[0], gps_start[1], gps.get_orientation()[2]])
 proximity = ProximitySensorP3DX(clientId)
 vision = VisionSensorP3DX(clientId)
+lmkf = LandmarkOdometerKf(odometer, landmarks)
 
 plotting_flag = False
 random_positions = []
 accurate_positions = []
 odometer_positions = []
 export_data = []
+
+destination_queue = [
+    coords[2],
+    coords[3],
+    coords[2],
+    coords[1]
+]
+
 
 # start time
 t = time.time()
@@ -55,6 +74,7 @@ while (time.time() - t) < LOOP_DURATION:
     odometer.update_motors()
     gps.update_position()
     proximity.update_distances()
+    lmkf.update()
 
     random_positions.append(gps.get_position())
     accurate_positions.append(gps.get_position(actual=True))
@@ -66,7 +86,8 @@ while (time.time() - t) < LOOP_DURATION:
 
     print(
         f"Landmark Ranges\n"
-        f"{landmarks.landmark_ranges()}"
+        f"{landmarks.landmark_ranges()}\n"
+        f"{lmkf.pose}"
     )
 
     export_data.append({
