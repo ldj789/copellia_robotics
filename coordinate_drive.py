@@ -4,6 +4,7 @@ import numpy as np  # array library
 import json
 
 import sim
+from matplotlib.pyplot import plot as plt
 from drive.navigate import turn_to_point, check_destination
 from sensors.position import RobotGPS
 from sensors.odometery import Odometer
@@ -16,6 +17,7 @@ loop_duration = 60  # in seconds
 speed_setting = 1.25
 PI = np.pi  # constant
 saving_data = True
+plotting = True
 
 export_data = []
 
@@ -110,3 +112,6 @@ _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, 0, sim.simx_opm
 if saving_data:
     with open('output.json', 'w') as data_out:
         data_out.write(json.dumps(export_data))
+
+if plotting:
+    plt.show()

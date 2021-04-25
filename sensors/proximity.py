@@ -15,7 +15,7 @@ class ProximitySensorP3DX:
         self._sensor_vals = np.zeros(16)
         self.op_mode = sim.simx_opmode_oneshot_wait
 
-        self.sensor_locs = np.array([
+        self._sensor_locs = np.array([
             -PI / 2, -50 / 180.0 * PI, -30 / 180.0 * PI,
             -10 / 180.0 * PI, 10 / 180.0 * PI, 30 / 180.0 * PI,
             50 / 180.0 * PI, PI / 2, PI / 2,
@@ -50,6 +50,11 @@ class ProximitySensorP3DX:
 
             self._sensor_vals[i] = np.linalg.norm(det_point) if np.linalg.norm(det_point) > 1e-10 else np.Inf
 
+    def get_distances(self, **kwargs):
+        if 'simple' in kwargs and kwargs['simgple']:
+            return self._sensor_vals
+        return np.vstack((self._sensor_vals, self._sensor_locs)).T
+
     def braitenberg_min(self):
         """Braitenberg pathing by avoiding the nearest wall
 
@@ -72,4 +77,4 @@ class ProximitySensorP3DX:
         # print({i: sensor_sqs[i] for i in range(len(sensor_sqs))})
         min_ind = np.where(sensor_sqs == np.min(sensor_sqs))
         min_ind = min_ind[0][0]
-        return self._sensor_vals[min_ind], self.sensor_locs[min_ind], min_ind
+        return self._sensor_vals[min_ind], self._sensor_locs[min_ind], min_ind

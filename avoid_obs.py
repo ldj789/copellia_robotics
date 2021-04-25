@@ -64,7 +64,9 @@ while (time.time() - t) < loop_duration:
         'odometer_x': odometer.pose[0],
         'odometer_y': odometer.pose[1]
     })
-    
+
+    print(proximity.get_distances())
+
     # Braitenberg steering
     if min_dist < 0.4:
         steer = 1 / min_sensor_angle
@@ -86,14 +88,14 @@ while (time.time() - t) < loop_duration:
     # print("V_l =", vl)
     # print("V_r =", vr)
 
-    _ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, vl, sim.simx_opmode_streaming)
-    _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, vr, sim.simx_opmode_streaming)
+    _ = sim.simxSetJointTargetVelocity(clientId, left_motor_handle, vl, sim.simx_opmode_streaming)
+    _ = sim.simxSetJointTargetVelocity(clientId, right_motor_handle, vr, sim.simx_opmode_streaming)
 
     time.sleep(0.2)  # loop executes once every 0.2 seconds (= 5 Hz)
 
 # Post Allocation - Stop
-_ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, 0, sim.simx_opmode_streaming)
-_ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, 0, sim.simx_opmode_streaming)
+_ = sim.simxSetJointTargetVelocity(clientId, left_motor_handle, 0, sim.simx_opmode_streaming)
+_ = sim.simxSetJointTargetVelocity(clientId, right_motor_handle, 0, sim.simx_opmode_streaming)
 # print(vision.raw_image())
 
 if saving_data:
