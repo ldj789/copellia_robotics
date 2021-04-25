@@ -193,5 +193,4 @@ _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, 0, sim.simx_opm
 if saving_data:
     with open('output.json', 'w') as data_out:
         data_out.write(json.dumps(export_data))
-
 # %%
