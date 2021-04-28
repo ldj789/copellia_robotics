@@ -33,6 +33,9 @@ class ProximitySensorP3DX:
                 self.op_mode)
             self._handles.append(sensor_handle)
 
+        for handle in self._handles:
+            _, _, _, _, _ = sim.simxReadProximitySensor(self.client_id, handle, sim.simx_opmode_streaming)
+
         # Load Values
         self.update_distances()
 
@@ -41,7 +44,7 @@ class ProximitySensorP3DX:
         for i, handle in enumerate(self._handles):
             _, det_state, det_point, det_obj_handle, det_surface_norm = \
                 sim.simxReadProximitySensor(
-                    self.client_id, handle, self.op_mode
+                    self.client_id, handle, sim.simx_opmode_buffer
                 )
 
             # print(f"i: {i}\n"

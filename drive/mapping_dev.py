@@ -14,8 +14,8 @@ from localization.kalman import GpsOdometerKf
 # from sensors.proximity import ProximitySensorP3DX
 
 # Initial Variables
-loop_duration = 25  # in seconds
-speed_setting = 1.25
+loop_duration = 15  # in seconds
+speed_setting = .5
 PI = np.pi  # constant
 saving_data = False
 plotting_flag = True
@@ -73,27 +73,36 @@ t = time.time()
 obstacle_positions = []
 robot_positions = []
 
+iteration_count = 0
 while (time.time() - t) < loop_duration:
+    iteration_count += 1
     gps.update_position()
-    odometer.update_motors()
-    kf.update()
     proximity.update_distances()
+    odometer.update_motors()
+
+    # kf.update()
     current_pose = gps.get_pose()
 
     obstacle_distances = proximity.get_distances()
     print(obstacle_distances)
+    print(iteration_count)
 
     # write obstacle position
     # robot_x + distance * np.cos(obs_theta + robot_theta),
     # robot_y + distance * np.sin(obs_theta + robot_theta)
-    for obstacle in obstacle_distances:
-        if obstacle[0] < 10:
-            obstacle_position = (
-                current_pose[0] + obstacle[0] * np.sin(obstacle[1] + current_pose[2]),
-                current_pose[1] + obstacle[0] * np.cos(obstacle[1] + current_pose[2])
-            )
-            obstacle_positions.append(obstacle_position)
-            print(obstacle_position)
+    for i, obstacle in enumerate(obstacle_distances):
+        # if i in [3, 4, 5, 6]:
+        if True:
+            if obstacle[0] < 10:
+                obstacle_position = (
+                    current_pose[0] + obstacle[0] * np.cos(current_pose[2] - obstacle[1]),
+                    current_pose[1] + obstacle[0] * np.sin(current_pose[2] - obstacle[1])
+                )
+                obstacle_positions.append(obstacle_position)
+                # print(
+                #     f"obs: {obstacle_position}\n"
+                #     f"bearing {current_pose[2]} adjustment {obstacle[1]}"
+                # )
     robot_positions.append(current_pose)
     print(current_pose)
 
@@ -114,7 +123,7 @@ while (time.time() - t) < loop_duration:
     _ = sim.simxSetJointTargetVelocity(clientId, right_motor_handle, vr, sim.simx_opmode_streaming)
     
     # loop executes once every 0.1 seconds (= 10 Hz)
-    time.sleep(0.1)
+    # time.sleep(0.1)
 
 # Post Allocation - Stop
 _ = sim.simxSetJointTargetVelocity(clientId, left_motor_handle, 0, sim.simx_opmode_streaming)
@@ -133,7 +142,9 @@ if plotting_flag:
     # oxs = list(map(lambda x: x[0], odometer_positions))
     # oys = list(map(lambda x: x[1], odometer_positions))
 
-    plt.plot(rxs, rys, color='r')
+    plt.scatter(rxs, rys, color='r')
     plt.plot(xs, ys, color='b')
     # plt.plot(oxs, oys, color='g')
+    plt.xlim([-6, 6])
+    plt.ylim([-6, 6])
     plt.show()

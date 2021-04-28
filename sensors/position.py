@@ -37,6 +37,7 @@ class RobotGPS:
         self.left_motor_position_sensor = PositionSensor(client_id, left_motor_name)
         self.right_motor_position_sensor = PositionSensor(client_id, right_motor_name)
         self._position_vec = self.set_position()
+        self._bearing = self.get_orientation()[2]
         self.noise = noise
 
     def __str__(self):
@@ -49,6 +50,7 @@ class RobotGPS:
 
     def update_position(self):
         self._position_vec = self.set_position()
+        self._bearing = self.get_orientation()[2]
 
     def get_position(self, **kwargs):
         if 'actual' in kwargs and kwargs['actual']:
@@ -62,8 +64,8 @@ class RobotGPS:
 
     def get_pose(self, **kwargs):
         if 'actual' in kwargs and kwargs['actual']:
-            return np.array([self._position_vec[0], self._position_vec[1], self.get_orientation()[2]])
-        return np.array([self._position_vec[0], self._position_vec[1], self.get_orientation()[2]]) + np.array([
+            return np.array([self._position_vec[0], self._position_vec[1], self._bearing])
+        return np.array([self._position_vec[0], self._position_vec[1], self._bearing]) + np.array([
             uniform(-self.noise, self.noise), uniform(-self.noise, self.noise), 0
         ])
 
