@@ -129,6 +129,7 @@ if saving_data:
 if plotting_flag:
     rxs = list(map(lambda x: x[0], obstacle_positions))
     rys = list(map(lambda x: x[1], obstacle_positions))
+    sensors = list(map(lambda x: x[2], obstacle_positions))
     xs = list(map(lambda x: x[0], robot_positions))
     ys = list(map(lambda x: x[1], robot_positions))
     # oxs = list(map(lambda x: x[0], odometer_positions))
@@ -137,6 +138,8 @@ if plotting_flag:
     plt.scatter(rxs, rys, color='r')
     plt.plot(xs, ys, color='b')
     # plt.plot(oxs, oys, color='g')
+    for i, sensor in enumerate(sensors):
+        plt.annotate(sensor, (rxs[i], rys[i]))
     plt.xlim([-6, 6])
     plt.ylim([-6, 6])
     plt.show()
