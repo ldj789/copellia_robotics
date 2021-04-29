@@ -223,6 +223,7 @@ typings/
 .dynamodb/
 
 *.code-workspace
+scratch/
 scratch.py
 
 remoteApi.dll

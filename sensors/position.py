@@ -16,13 +16,17 @@ class PositionSensor:
             handle_name,
             self._def_op_mode
         )
-        
+        _, _ = sim.simxGetObjectPosition(self._client_id, self._handle, -1, sim.simx_opmode_buffer)
+        _, _ = sim.simxGetObjectPosition(self._client_id, self._handle, -1, sim.simx_opmode_streaming)
+        _, _ = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, sim.simx_opmode_buffer)
+        _, _ = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, sim.simx_opmode_streaming)
+
     def get_position(self):
-        _, pos = sim.simxGetObjectPosition(self._client_id, self._handle, -1, self._def_op_mode)
+        _, pos = sim.simxGetObjectPosition(self._client_id, self._handle, -1, sim.simx_opmode_streaming)
         return np.array(pos)
 
     def get_orientation(self):
-        _, orientation = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, self._def_op_mode)
+        _, orientation = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, sim.simx_opmode_streaming)
         return orientation
 
 
@@ -36,8 +40,10 @@ class RobotGPS:
         self.frame = PositionSensor(client_id, frame_name)
         self.left_motor_position_sensor = PositionSensor(client_id, left_motor_name)
         self.right_motor_position_sensor = PositionSensor(client_id, right_motor_name)
-        self._position_vec = self.set_position()
-        self._bearing = self.get_orientation()[2]
+        self._position_vec = []
+        self.set_position()
+        self._bearing = 0
+        self.set_orientation()
         self.noise = noise
 
     def __str__(self):
@@ -46,11 +52,11 @@ class RobotGPS:
     def set_position(self):
         rp = self.right_motor_position_sensor.get_position()
         lp = self.left_motor_position_sensor.get_position()
-        return np.array([(rp[0] + lp[0]) / 2, (rp[1] + lp[1]) / 2, (rp[2] + lp[2]) / 2])
+        self._position_vec = np.array([(rp[0] + lp[0]) / 2, (rp[1] + lp[1]) / 2, (rp[2] + lp[2]) / 2])
 
     def update_position(self):
-        self._position_vec = self.set_position()
-        self._bearing = self.get_orientation()[2]
+        self.set_position()
+        self.set_orientation()
 
     def get_position(self, **kwargs):
         if 'actual' in kwargs and kwargs['actual']:
@@ -60,7 +66,10 @@ class RobotGPS:
         ])
 
     def get_orientation(self):
-        return self.frame.get_orientation()
+        return self._bearing
+
+    def set_orientation(self):
+        self._bearing = self.frame.get_orientation()[2]
 
     def get_pose(self, **kwargs):
         if 'actual' in kwargs and kwargs['actual']:

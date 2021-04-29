@@ -48,7 +48,7 @@ _, right_motor_handle = sim.simxGetObjectHandle(clientId, 'Pioneer_p3dx_rightMot
 gps = RobotGPS(clientId)
 proximity = ProximitySensorP3DX(clientId)
 gps_start = gps.get_position(actual=True)
-odometer = Odometer(clientId, 0.097, pose=[gps_start[0], gps_start[1], gps.get_orientation()[2]])
+odometer = Odometer(clientId, 0.097, pose=[gps_start[0], gps_start[1], gps.get_orientation()])
 
 # proximity = ProximitySensorP3DX(clientID)
 
@@ -70,6 +70,7 @@ print(
     f"required turn: {turn_to_point(current_pose, current_destination)}"
 )
 
+time.sleep(0.25)
 # start time
 t = time.time()
 
@@ -78,8 +79,8 @@ robot_positions = []
 
 # pprint(proximity.get_indexed_locations(pose=gps.get_pose()))
 # pprint(proximity.get_related_info(gps.frame._handle))
-
 iteration_count = 0
+
 while (time.time() - t) < loop_duration:
     iteration_count += 1
     gps.update_position()
@@ -93,10 +94,14 @@ while (time.time() - t) < loop_duration:
     print(obstacle_distances)
     print(iteration_count)
     proximate_objects = proximity.get_proximate_objects(current_pose=current_pose)
+    for i, obj in enumerate(proximate_objects):
+        proximate_objects[i] = obj + (iteration_count,)
+        print(proximate_objects[i])
+
     obstacle_positions.extend(proximate_objects)
 
-    robot_positions.append(current_pose)
     print(current_pose)
+    robot_positions.append(current_pose)
 
     current_destination = check_destination(current_pose, current_destination, destination_queue)
 
@@ -129,7 +134,8 @@ if saving_data:
 if plotting_flag:
     rxs = list(map(lambda x: x[0], obstacle_positions))
     rys = list(map(lambda x: x[1], obstacle_positions))
-    sensors = list(map(lambda x: x[2], obstacle_positions))
+    iterations = list(map(lambda x: x[2], obstacle_positions))
+    # sensors = list(map(lambda x: x[2], obstacle_positions))
     xs = list(map(lambda x: x[0], robot_positions))
     ys = list(map(lambda x: x[1], robot_positions))
     # oxs = list(map(lambda x: x[0], odometer_positions))
@@ -137,10 +143,11 @@ if plotting_flag:
 
     plt.scatter(rxs, rys, color='r')
     plt.plot(xs, ys, color='b')
+    # plt.text(rxs, rys, iterations)
+    [plt.annotate(iterations[i], (rxs[i] + .2, rys[i] + .2)) for i in range(len(iterations))]
     # plt.plot(oxs, oys, color='g')
-    for i, sensor in enumerate(sensors):
-        plt.annotate(sensor, (rxs[i], rys[i]))
+    # for i, sensor in enumerate(obstacle_positions):
+    #     plt.annotate(sensor, (rxs[i], rys[i]))
     plt.xlim([-6, 6])
     plt.ylim([-6, 6])
     plt.show()
-    

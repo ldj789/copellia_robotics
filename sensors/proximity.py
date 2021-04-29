@@ -111,8 +111,7 @@ class ProximitySensorP3DX:
                     # dy = 0
                     res.append((
                         current_pose[0] + dx + obstacle[0] * np.cos(current_pose[2] - obstacle[1]),
-                        current_pose[1] + dy + obstacle[0] * np.sin(current_pose[2] - obstacle[1]),
-                        i
+                        current_pose[1] + dy + obstacle[0] * np.sin(current_pose[2] - obstacle[1])
                     ))
                     # obstacle_positions.append(obstacle_position)
                     # print(
