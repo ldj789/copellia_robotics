@@ -2,6 +2,7 @@ import sys
 import time  # used to keep track of time
 import numpy as np  # array library
 import json
+from pprint import pprint
 
 import sim
 import matplotlib.pyplot as plt
@@ -14,8 +15,10 @@ from localization.kalman import GpsOdometerKf
 # from sensors.proximity import ProximitySensorP3DX
 
 # Initial Variables
-loop_duration = 15  # in seconds
-speed_setting = .5
+loop_duration = 10  # in seconds
+speed_setting = 1
+# loop_duration = 0  # in seconds
+# speed_setting = 0
 PI = np.pi  # constant
 saving_data = False
 plotting_flag = True
@@ -57,7 +60,7 @@ destination_queue = [
 ]
 
 current_destination = destination_queue.pop(0)
-current_pose = gps.get_pose()
+current_pose = gps.get_pose(actual=True)
 kf = GpsOdometerKf(gps, odometer, pose=current_pose)
 
 print(
@@ -73,6 +76,9 @@ t = time.time()
 obstacle_positions = []
 robot_positions = []
 
+# pprint(proximity.get_indexed_locations(pose=gps.get_pose()))
+# pprint(proximity.get_related_info(gps.frame._handle))
+
 iteration_count = 0
 while (time.time() - t) < loop_duration:
     iteration_count += 1
@@ -86,23 +92,9 @@ while (time.time() - t) < loop_duration:
     obstacle_distances = proximity.get_distances()
     print(obstacle_distances)
     print(iteration_count)
+    proximate_objects = proximity.get_proximate_objects(current_pose=current_pose)
+    obstacle_positions.extend(proximate_objects)
 
-    # write obstacle position
-    # robot_x + distance * np.cos(obs_theta + robot_theta),
-    # robot_y + distance * np.sin(obs_theta + robot_theta)
-    for i, obstacle in enumerate(obstacle_distances):
-        # if i in [3, 4, 5, 6]:
-        if True:
-            if obstacle[0] < 10:
-                obstacle_position = (
-                    current_pose[0] + obstacle[0] * np.cos(current_pose[2] - obstacle[1]),
-                    current_pose[1] + obstacle[0] * np.sin(current_pose[2] - obstacle[1])
-                )
-                obstacle_positions.append(obstacle_position)
-                # print(
-                #     f"obs: {obstacle_position}\n"
-                #     f"bearing {current_pose[2]} adjustment {obstacle[1]}"
-                # )
     robot_positions.append(current_pose)
     print(current_pose)
 
@@ -148,3 +140,4 @@ if plotting_flag:
     plt.xlim([-6, 6])
     plt.ylim([-6, 6])
     plt.show()
+    
