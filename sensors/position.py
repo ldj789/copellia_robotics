@@ -16,17 +16,17 @@ class PositionSensor:
             handle_name,
             self._def_op_mode
         )
-        _, _ = sim.simxGetObjectPosition(self._client_id, self._handle, -1, sim.simx_opmode_buffer)
-        _, _ = sim.simxGetObjectPosition(self._client_id, self._handle, -1, sim.simx_opmode_streaming)
-        _, _ = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, sim.simx_opmode_buffer)
-        _, _ = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, sim.simx_opmode_streaming)
+        # _, _ = sim.simxGetObjectPosition(self._client_id, self._handle, -1, sim.simx_opmode_buffer)
+        # _, _ = sim.simxGetObjectPosition(self._client_id, self._handle, -1, sim.simx_opmode_streaming)
+        # _, _ = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, sim.simx_opmode_buffer)
+        # _, _ = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, sim.simx_opmode_streaming)
 
     def get_position(self):
-        _, pos = sim.simxGetObjectPosition(self._client_id, self._handle, -1, sim.simx_opmode_streaming)
+        _, pos = sim.simxGetObjectPosition(self._client_id, self._handle, -1, sim.simx_opmode_oneshot_wait)
         return np.array(pos)
 
     def get_orientation(self):
-        _, orientation = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, sim.simx_opmode_streaming)
+        _, orientation = sim.simxGetObjectOrientation(self._client_id, self._handle, -1, sim.simx_opmode_oneshot_wait)
         return orientation
 
 
