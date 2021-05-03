@@ -11,6 +11,7 @@ construct
 """
 import sim
 import numpy as np
+from drive.navigate import pi_mod4q
 
 
 class Landmark:
@@ -26,7 +27,7 @@ class Landmark:
 
 
 class RobotLandmarks:
-    def __init__(self, client_id, **kwargs):
+    def __init__(self, client_id, robot_gps, **kwargs):
         self._client_id = client_id
         self._def_op_mode = sim.simx_opmode_oneshot_wait
 
@@ -38,7 +39,7 @@ class RobotLandmarks:
                 kwargs.get('robot_frame', 'Pioneer_p3dx'),
                 self._def_op_mode
             )
-
+        self.robot_gps = robot_gps  # RobotGPS class
         self._landmark_handles = []
         if 'landmark_handles' in kwargs:
             # self.extend_landmarks_from handles(kwargs['landmark_handles'])
@@ -76,9 +77,10 @@ class RobotLandmarks:
         )
         self._landmark_handles.append(lm_handle)
 
-    def get_robot_position(self):
-        _, res = sim.simxGetObjectPosition(self._client_id, self._robot_handle, -1, self._def_op_mode)
-        return res
+    # def get_robot_pose(self):
+    #     _, position = sim.simxGetObjectPosition(self._client_id, self._robot_handle, -1, self._def_op_mode)
+    #     _, orientation = sim.simxGetObjectOrientation(self._client_id, self._robot_handle, -1, self._def_op_mode)
+    #     return np.array([position[0], position[1], orientation[2]])
 
     @staticmethod
     def calculate_range(robot_pov_pos, landmark_pos):
@@ -87,23 +89,23 @@ class RobotLandmarks:
         :param landmark_pos: np.array()
         :return: scalar of distance
         """
-        dx = robot_pov_pos[0] - landmark_pos[0]
-        dy = robot_pov_pos[1] - landmark_pos[1]
+        dx = landmark_pos[0] - robot_pov_pos[0]
+        dy = landmark_pos[1] - robot_pov_pos[1]
         d = np.sqrt(dx ** 2 + dy ** 2)
-        theta = np.arctan2(dy, dx) - robot_pov_pos[2]
+        # print(f"{np.arctan2(dy, dx)}, {robot_pov_pos[2]} {pi_mod4q(np.arctan2(dy, dx) - robot_pov_pos[2])}")
+        theta = pi_mod4q(np.arctan2(dy, dx) - robot_pov_pos[2])
         return np.array([d, theta])
 
     def landmark_ranges(self, **kwargs):
         """Get range and angle for each landmark"""
         # robot position -  private to this function
-        robot_pov_pos = self.get_robot_position()
-        print(robot_pov_pos)
-        # res = []
+        # TODO Landmark Position does not change - so no api call needed here
+        robot_pov_pos = self.robot_gps.get_pose(actual=True)
+        print(f"actual pose {robot_pov_pos}")
         res = np.zeros((0, 2))
         for i, lm_handle in enumerate(self._landmark_handles):
             _, landmark_pos = sim.simxGetObjectPosition(self._client_id, lm_handle, -1, self._def_op_mode)
-            # res.append(self.calculate_range(robot_pov_pos, landmark_pos))
-            np.vstack(res, self.calculate_range(robot_pov_pos, landmark_pos))
+            res = np.vstack((res, self.calculate_range(robot_pov_pos, landmark_pos)))
         return res
 
     def is_visible(self, lm):
@@ -145,7 +147,10 @@ class RobotLandmarks:
 
     def get_landmark_positions(self):
         """Get a list of landmark (x, y) coordinates"""
-        return [np.array(lm.position) for lm in self.landmarks]
+        # res = [np.array(lm.position) for lm in self.landmarks]
+        res = np.array([(lm.position[0], lm.position[1]) for lm in self.landmarks])
+        # print(res)
+        return res
 
     def update_landmark_positions(self):
         """update landmark positions"""

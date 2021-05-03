@@ -72,8 +72,8 @@ while (time.time() - t) < loop_duration:
     gps.update_position()
     odometer.update_motors()
     kf.update()
-    current_pose = gps.get_pose()
 
+    current_pose = gps.get_pose()
     current_destination = check_destination(current_pose, current_destination, destination_queue)
 
     if current_destination is None:

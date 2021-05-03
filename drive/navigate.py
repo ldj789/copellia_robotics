@@ -25,7 +25,7 @@ def turn_to_point(pose, dest):
     return rotation * np.pi
 
 
-def check_destination(pose, dest, dest_queue, d=.2):
+def check_destination(pose, dest, dest_queue, d=.25):
     """Check proximity to destination and maybe update pathing"""
     if dest is None:
         return None
@@ -35,6 +35,14 @@ def check_destination(pose, dest, dest_queue, d=.2):
         dest = dest_queue.pop(0) if len(dest_queue) > 0 else None
     return dest
 
+
+def pi_mod4q(theta):
+    """Unit circle modulo
+
+    This is in handy in case we make any turns, we want them to be minimal
+    so 90 degree direction not 270 degree direction
+    """
+    return ((theta + np.pi) % (2 * np.pi)) - np.pi
 
 """
 bearing = imu.read_euler()[0] * math.pi/180

@@ -7,6 +7,7 @@ import numpy as np  # array library
 
 import sim
 
+from drive.navigate import turn_to_point, check_destination
 from sensors.odometery import Odometer
 from sensors.position import RobotGPS
 from sensors.proximity import ProximitySensorP3DX
@@ -17,17 +18,19 @@ import matplotlib.pyplot as plt  # used for image plotting
 import json
 
 # Initial Variables
-LOOP_DURATION = 15  # in seconds
+LOOP_DURATION = 5  # in seconds
+speed_setting = 1.25
+PI = np.pi  # constant
 PLOTTING_FLAG = False
 SAVING_DATA = False
 
 LANDMARK_FRAMES = ["LM_Blue", "LM_Green", "LM_Red", "LM_Yellow"]
 
-# Coordinates to drive along
+# Coordinates to drive along in maze
 coords = {
-    1: (-3.9, -0.5),
-    2: (-3.9, 3.9),
-    3: (3.5, 3.9),
+    1: (-3.8, -0.5),
+    2: (-3.8, 3.8),
+    3: (3.5, 3.8),
 }
 
 
@@ -43,15 +46,14 @@ else:
 _, left_motor_handle = sim.simxGetObjectHandle(clientId, 'Pioneer_p3dx_leftMotor', sim.simx_opmode_oneshot_wait)
 _, right_motor_handle = sim.simxGetObjectHandle(clientId, 'Pioneer_p3dx_rightMotor', sim.simx_opmode_oneshot_wait)
 
-landmarks = RobotLandmarks(clientId, landmark_frames=LANDMARK_FRAMES)
 gps = RobotGPS(clientId)
+landmarks = RobotLandmarks(clientId, gps, landmark_frames=LANDMARK_FRAMES)
 gps_start = gps.get_position(actual=True)
 
-print(gps.get_orientation())
-odometer = Odometer(clientId, 0.098, pose=[gps_start[0], gps_start[1], gps.get_orientation()[2]])
+odometer = Odometer(clientId, 0.098, pose=[gps_start[0], gps_start[1], gps.get_orientation()])
 proximity = ProximitySensorP3DX(clientId)
 vision = VisionSensorP3DX(clientId)
-lmkf = LandmarkOdometerKf(odometer, landmarks)
+lmkf = LandmarkOdometerKf(odometer, landmarks, init_pose=gps.get_pose(actual=True))
 
 plotting_flag = False
 random_positions = []
@@ -65,7 +67,7 @@ destination_queue = [
     coords[2],
     coords[1]
 ]
-
+current_destination = destination_queue.pop(0)
 
 # start time
 t = time.time()
@@ -86,8 +88,11 @@ while (time.time() - t) < LOOP_DURATION:
 
     print(
         f"Landmark Ranges\n"
-        f"{landmarks.landmark_ranges()}\n"
-        f"{lmkf.pose}"
+        f"lmkf pose: {lmkf.pose}\n"
+        f"odometer pose: {odometer.pose}\n"
+        # verify relative distances between odometer and kf across run
+        # f"{(lmkf.pose[0] - odometer.pose[0], lmkf.pose[1] - odometer.pose[1])}\n"
+        # f"lm ranges: {landmarks.landmark_ranges()}\n"
     )
 
     export_data.append({
@@ -97,7 +102,24 @@ while (time.time() - t) < LOOP_DURATION:
         'odometer_y': odometer.pose[1]
     })
 
-    time.sleep(0.2)  # loop executes once every 0.2 seconds (= 5 Hz)
+    current_pose = gps.get_pose()
+    current_destination = check_destination(current_pose, current_destination, destination_queue, d=0.5)
+
+    if current_destination is None:
+        v, steer = 0, 0
+    else:
+        v, steer = speed_setting, turn_to_point(current_pose, current_destination) / np.pi
+
+    kp = 2  # steering gain
+    vl = v - kp * steer
+    vr = v + kp * steer
+    # print("V_l =", vl)
+    # print("V_r =", vr)
+
+    _ = sim.simxSetJointTargetVelocity(clientId, left_motor_handle, vl, sim.simx_opmode_streaming)
+    _ = sim.simxSetJointTargetVelocity(clientId, right_motor_handle, vr, sim.simx_opmode_streaming)
+
+    time.sleep(0.1)  # loop executes once every 0.1 seconds (= 10 Hz)
 
 # Post Allocation - Stop
 _ = sim.simxSetJointTargetVelocity(clientId, left_motor_handle, 0, sim.simx_opmode_streaming)

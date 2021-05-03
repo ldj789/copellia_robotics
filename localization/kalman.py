@@ -1,5 +1,6 @@
 import time
 import numpy as np
+from drive.navigate import pi_mod4q
 
 
 # noinspection PyPep8Naming
@@ -122,6 +123,8 @@ class LandmarkOdometerKf:
         # X = (robot_x, robot_y, robot_theta, lm1_x, lm1_y, ..., lmn_x, lmn_y)
         # initialize position
         self.pose = [0, 0, 0]
+        if 'init_pose' in kwargs:
+            self.pose = kwargs['init_pose']
         self.S = len(self.pose)
         self.lmS = 2
         if "pose" in kwargs:
@@ -130,8 +133,10 @@ class LandmarkOdometerKf:
         self.prior_odometer_position = self.odometer.get_position()
 
         # initialize matrices for kf calculation
-        self.P = np.identity(2)  # keep
-        self.H = np.identity(2)  # keep
+        self.kf_p = np.identity(3)  # keep
+        self.H = np.identity(3)  # keep
+        # EKF state covariance
+        self.Cx = np.diag([0.5, 0.5, np.deg2rad(30.0)]) ** 2  # Change in covariance
 
     def update(self):
         """Update - Performs the Kalman filter update
@@ -145,12 +150,13 @@ class LandmarkOdometerKf:
          Completes with inplace update of self.pose
         """
         # kf_x = np.vstack((odometer_position, *[self.landmarks.landmark_positions]))
-        kf_x = np.hstack((self.pose, *[self.landmarks.get_landmark_positions()])).T
+        kf_x = np.hstack((self.pose, self.landmarks.get_landmark_positions().flatten())).T
         # Predict
-        kf_x, PEst, G, Fx = self.kf_predict(kf_x, PEst, u)
+        # kf_x, kf_p, G, Fx = self.kf_predict(kf_x, u)
+        kf_x, kf_p, G = self.kf_predict(kf_x)
 
         # Update
-        # kf_x, PEst = self.kf_update(x_pred, PEst)
+        kf_x, PEst = self.kf_update(kf_x, kf_p)
 
         # Review
         print(
@@ -162,14 +168,15 @@ class LandmarkOdometerKf:
 
         # Save to self
         self.pose = kf_x[0:3]
+        self.kf_p = kf_p
 
     def kf_predict(self, kf_x):
         """
         Performs the prediction of state based upon odometery motion model
 
         :param kf_x: update to position known from controls, nx1 state vector
-        # :param xEst: nx1 state vector
-        # :param PEst: nxn covariacne matrix
+         nx1 state vector representing X (pose, lmxy1, ..., lmxyn)
+        # :param kf_p: nxn covariance matrix - COMING FROM SELF
         # :param u:    2x1 control vector
         :returns:    predicted state vector, predicted covariance, jacobian of control vector, transition fx
         """
@@ -179,7 +186,8 @@ class LandmarkOdometerKf:
         # u_t_control is the update to odometery motion model at time t (now)
         u_t_control = np.array(
             [odometer_position[0] - self.prior_odometer_position[0],
-             odometer_position[1] - self.prior_odometer_position[1]]
+             odometer_position[1] - self.prior_odometer_position[1],
+             pi_mod4q(odometer_position[2] - self.prior_odometer_position[2])]
         )
 
         # update prior odometer position
@@ -187,45 +195,40 @@ class LandmarkOdometerKf:
 
         # predict state update
         kf_x[0:3] = kf_x[0:3] + u_t_control
+        kf_x[2] = pi_mod4q(kf_x[2])
 
         # predict covariance
         # P = G.T @ P @ G + Cx
-        Fx = np.hstack(
-            (np.eye(self.S),
-             np.zeros((self.S, self.lmS * len(self.landmarks))))
-        )
+
+        # TODO Jacobian for odometery motion model
         J_control = np.array([
-            [1, 0, 0],
-            [0, 1, 0],
-            [0, 0, 1]
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0]
         ])
 
-        G = np.eye(self.S) + Fx.T @ J_control @ Fx
+        G = np.eye(self.S) + J_control
 
-        # xEst[0:S] = motion_model(xEst[0:S], u)
-        # Fx is an an identity matrix of size (STATE_SIZE)
         # sigma = G*sigma*G.T + Noise
         # Upper left corner of covariance is updated
-        PEst[0:self.S, 0:self.S] = G.T @ PEst[0:self.S, 0:self.S] @ G + Fx.T @ Cx @ Fx
-        return kf_x, PEst, G, Fx
+        kf_p = self.kf_p
+        kf_p[0:self.S, 0:self.S] = G.T @ kf_p[0:self.S, 0:self.S] @ G + self.Cx
+        return kf_x, kf_p, G
 
-    def kf_update(self, kf_x, PEst):
+    def kf_update(self, kf_x, kf_p):
         """Performs the update step of EKF SLAM
 
         :param kf_x:  nx1 the predicted pose of the system and the pose of the landmarks
-        :param PEst:  nxn the predicted covariance
-        :param u:     2x1 the control function
-        :param z:     the measurements read at new position
+        :param kf_p:  nxn the predicted covariance
+        # :param u:     2x1 the control function
+        # :param z:     the measurements read at new position
         :returns:     the updated state and covariance for the system
         """
         # TODO visibility update
-        z = self.landmarks.landmark_ranges()
-        n_v = len(z)
+        lm_ranges = self.landmarks.landmark_ranges()
+        n_lm = len(lm_ranges)
 
-        # TODO: Create initP: 2x2 an identity matrix acting as the initial covariance
-        initP = np.eye(len(n_v))
-
-        for iz in range(len(z[:, 0])):  # for each landmark
+        for i_lm in range(len(lm_ranges[:, 0])):  # for each landmark
             # minid = search_correspond_LM_ID(xEst, PEst, z[iz, 0:2])  # associate to a known landmark
 
             # nLM = len(self.landmarks)
@@ -239,9 +242,11 @@ class LandmarkOdometerKf:
             #     xEst = xAug
             #     PEst = PAug
 
-            lm_x = self.kf_get_lm_position_from_state(kf_x, iz)
+            lm_x = self.kf_get_lm_position_from_state(kf_x, i_lm)
+            print(f"i: {i_lm}, lm_x: {lm_x}")
             # y, S, H = calc_innovation(lm_x, xEst, PEst, z[iz, 0:2], minid)
-            y = self.kf_calculate_innovation(lm_x, z[iz, 0:2], kf_x[0:3])
+            y = self.kf_calculate_innovation(lm_x, lm_ranges[i_lm, 0:2], kf_x[0:3])
+            print(f"y {y}\n")
 
             # TODO:
             #  0) ensure shape of z per calling instructions on line 244
@@ -251,13 +256,14 @@ class LandmarkOdometerKf:
             #    [5, -2]]
             #  1) run update with gain of 0.5
             #  2) propagate covariance calculations and review dynamic gain
-            #  3) drop pi_2_pi
-            K = (PEst @ H.T) @ np.linalg.inv(S)  # Calculate Kalman Gain, to start 0.5
-            xEst = xEst + (K @ y)
-            PEst = (np.eye(len(xEst)) - (K @ H)) @ PEst
+            #  3) create a pi_2_pi of own
+            #  Integrate  PEst
+            # K = (kf_p @ self.H.T) @ np.linalg.inv(self.S)  # Calculate kalman Gain, to start 0.5
+            # kf_x = kf_x + (K @ y)
+            # kf_p = (np.eye(len(kf_x)) - (K @ self.H)) @ kf_p
 
-        xEst[2] = pi_2_pi(xEst[2])
-        return xEst, PEst
+        kf_x[2] = pi_mod4q(kf_x[2])
+        return kf_x, kf_p
 
     @staticmethod
     def kf_get_lm_position_from_state(kf_x, iz):
@@ -265,7 +271,7 @@ class LandmarkOdometerKf:
             (a, a, a, b, b, c, c, d, d, e, e)
         :return: lm_x (x, y) of the landmark to be returned from kf_x
         """
-        return kf_x[3+iz*2, 4+iz*2]
+        return kf_x[3+iz*2:5+iz*2]
 
     @staticmethod
     def kf_calculate_innovation(lm_x, lm_range, pose):
@@ -278,11 +284,30 @@ class LandmarkOdometerKf:
         :return: (dx, dy)
         """
         u = (
-            (lm_x[0] - lm_range[0] * np.cos(lm_range[1])),
-            (lm_x[1] - lm_range[0] * np.sin(lm_range[1]))
+            (lm_x[0] + lm_range[0] * np.cos(pose[2] + lm_range[1])),
+            (lm_x[1] + lm_range[0] * np.sin(pose[2] + lm_range[1]))
         )
-        print(u)
-        return (
+        innovation = (
             (u[0] - pose[0]),
             (u[1] - pose[1])
         )
+        # innovation = (
+        #     (pose[0] - u[0]),
+        #     (pose[1] - u[1])
+        # )
+        print(
+            f"lm range {lm_range}\n"
+            f"lm robot pos (x,y) {u}\n"
+            f"prior est (x, y) {pose[0:2]}\n"
+            f"innovation {innovation}"
+        )
+        return innovation
+
+    # @staticmethod
+    # def pi_mod4q(theta):
+    #     """Unit circle modulo
+    #
+    #     This is in handy in case we make any turns, we want them to be minimal
+    #     so 90 degree direction not 270 degree direction
+    #     """
+    #     return ((theta + np.pi) % (2 * np.pi)) - np.pi
