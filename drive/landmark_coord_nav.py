@@ -18,8 +18,9 @@ import matplotlib.pyplot as plt  # used for image plotting
 import json
 
 # Initial Variables
-LOOP_DURATION = 5  # in seconds
-speed_setting = 1.25
+LOOP_DURATION = 3  # in seconds
+speed_setting = 0.75
+kp = 2  # steering gain
 PI = np.pi  # constant
 PLOTTING_FLAG = False
 SAVING_DATA = False
@@ -110,7 +111,6 @@ while (time.time() - t) < LOOP_DURATION:
     else:
         v, steer = speed_setting, turn_to_point(current_pose, current_destination) / np.pi
 
-    kp = 2  # steering gain
     vl = v - kp * steer
     vr = v + kp * steer
     # print("V_l =", vl)

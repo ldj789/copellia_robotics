@@ -92,7 +92,7 @@ class RobotLandmarks:
         dx = landmark_pos[0] - robot_pov_pos[0]
         dy = landmark_pos[1] - robot_pov_pos[1]
         d = np.sqrt(dx ** 2 + dy ** 2)
-        # print(f"{np.arctan2(dy, dx)}, {robot_pov_pos[2]} {pi_mod4q(np.arctan2(dy, dx) - robot_pov_pos[2])}")
+        print(f"{np.arctan2(dy, dx)}, {robot_pov_pos[2]} {pi_mod4q(np.arctan2(dy, dx) - robot_pov_pos[2])}")
         theta = pi_mod4q(np.arctan2(dy, dx) - robot_pov_pos[2])
         return np.array([d, theta])
 

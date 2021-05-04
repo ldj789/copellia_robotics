@@ -245,24 +245,17 @@ class LandmarkOdometerKf:
             lm_x = self.kf_get_lm_position_from_state(kf_x, i_lm)
             print(f"i: {i_lm}, lm_x: {lm_x}")
             # y, S, H = calc_innovation(lm_x, xEst, PEst, z[iz, 0:2], minid)
-            y = self.kf_calculate_innovation(lm_x, lm_ranges[i_lm, 0:2], kf_x[0:3])
-            print(f"y {y}\n")
+            innovation = self.kf_calculate_innovation_polar(lm_x, lm_ranges[i_lm, 0:2], kf_x[0:3])
+            # print(f"innovation {innovation}\n")
 
-            # TODO:
-            #  0) ensure shape of z per calling instructions on line 244
-            #   should look like
-            #   [[4, .24],
-            #    [8, 1.57],
-            #    [5, -2]]
+            # TODO integrate covariance:
             #  1) run update with gain of 0.5
             #  2) propagate covariance calculations and review dynamic gain
-            #  3) create a pi_2_pi of own
-            #  Integrate  PEst
+
             # K = (kf_p @ self.H.T) @ np.linalg.inv(self.S)  # Calculate kalman Gain, to start 0.5
             # kf_x = kf_x + (K @ y)
             # kf_p = (np.eye(len(kf_x)) - (K @ self.H)) @ kf_p
 
-        kf_x[2] = pi_mod4q(kf_x[2])
         return kf_x, kf_p
 
     @staticmethod
@@ -274,7 +267,7 @@ class LandmarkOdometerKf:
         return kf_x[3+iz*2:5+iz*2]
 
     @staticmethod
-    def kf_calculate_innovation(lm_x, lm_range, pose):
+    def kf_calculate_innovation_pose(lm_x, lm_range, pose):
         """Calculate difference is position between current odometery pose
         and that working back from observed landmark and its known position
 
@@ -284,30 +277,54 @@ class LandmarkOdometerKf:
         :return: (dx, dy)
         """
         u = (
-            (lm_x[0] + lm_range[0] * np.cos(pose[2] + lm_range[1])),
-            (lm_x[1] + lm_range[0] * np.sin(pose[2] + lm_range[1]))
+            (lm_x[0] - lm_range[0] * np.cos(pose[2] + lm_range[1])),
+            (lm_x[1] - lm_range[0] * np.sin(pose[2] + lm_range[1]))
         )
         innovation = (
             (u[0] - pose[0]),
             (u[1] - pose[1])
         )
-        # innovation = (
-        #     (pose[0] - u[0]),
-        #     (pose[1] - u[1])
-        # )
         print(
             f"lm range {lm_range}\n"
             f"lm robot pos (x,y) {u}\n"
-            f"prior est (x, y) {pose[0:2]}\n"
+            f"lmrp calc {lm_x[0]} - {lm_range[0]} * {np.cos(pose[2] + lm_range[1])}\n"
+            f"prior est (x, y, theta) {pose[0:3]}\n"
             f"innovation {innovation}"
         )
         return innovation
 
-    # @staticmethod
-    # def pi_mod4q(theta):
-    #     """Unit circle modulo
-    #
-    #     This is in handy in case we make any turns, we want them to be minimal
-    #     so 90 degree direction not 270 degree direction
-    #     """
-    #     return ((theta + np.pi) % (2 * np.pi)) - np.pi
+    @staticmethod
+    def kf_calculate_innovation_polar(lm_x, lm_range, pose):
+        """Calculate difference is position between current odometery pose
+        and that working back from observed landmark and its known position
+
+        :pose: (x, y, theta) for robot a.k.a. kf_x[0:3]
+        :lm_x: (x, y) for landmark (absolute)
+        :lm_range: (d, theta) for landmark (observed)
+        :return: (dx, dy)
+        """
+        est_x = (
+            lm_x[0] - pose[0],
+            lm_x[1] - pose[1]
+        )
+        est_theta = np.arctan2(est_x[1], est_x[0])
+        est_polar = (
+            np.sqrt(est_x[0] ** 2 + est_x[1] ** 2),
+            pi_mod4q(est_theta - pose[2])
+        )
+
+        innovation = np.array((
+            lm_range[0] - est_polar[0],
+            pi_mod4q(lm_range[1]- est_polar[1])
+        ))
+        print(
+            f"obs polar {lm_range}\n"
+            f"est polar (x,y) {est_polar}\n"
+            f"innovation {innovation}\n"
+        )
+        return innovation
+
+    @staticmethod
+    def kf_gain_innovation(kf_x, innovation, gain):
+        
+        return kf_x
