@@ -133,7 +133,7 @@ class LandmarkOdometerKf:
         self.prior_odometer_position = self.odometer.get_position()
 
         # initialize matrices for kf calculation
-        self.kf_p = np.identity(3)  # keep
+        self.kf_p = np.eye(3 + len(self.landmarks) * 2)  # keep
         self.H = np.identity(3)  # keep
         # EKF state covariance
         self.Cx = np.diag([0.5, 0.5, np.deg2rad(30.0)]) ** 2  # Change in covariance
@@ -168,7 +168,7 @@ class LandmarkOdometerKf:
 
         # Save to self
         self.pose = kf_x[0:3]
-        self.kf_p = kf_p
+        self.kf_p[0:3, 0:3] = kf_p[0:3, 0:3]
 
     def kf_predict(self, kf_x):
         """
@@ -199,11 +199,11 @@ class LandmarkOdometerKf:
 
         # predict covariance
         # P = G.T @ P @ G + Cx
+        d = np.sqrt(u_t_control[0] ** 2 + u_t_control[1] ** 2)
 
-        # TODO Jacobian for odometery motion model
         J_control = np.array([
-            [0, 0, 0],
-            [0, 0, 0],
+            [0, 0, .25 * d * np.sin(kf_x[2])],  # delta_time * u[0] * sin(kf_x[2])
+            [0, 0, .25 * d * np.cos(kf_x[2])],  # delta_time * u[0] * sin(kf_x[2])
             [0, 0, 0]
         ])
 
@@ -212,7 +212,7 @@ class LandmarkOdometerKf:
         # sigma = G*sigma*G.T + Noise
         # Upper left corner of covariance is updated
         kf_p = self.kf_p
-        kf_p[0:self.S, 0:self.S] = G.T @ kf_p[0:self.S, 0:self.S] @ G + self.Cx
+        kf_p[0:3, 0:3] = G.T @ kf_p[0:3, 0:3] @ G + self.Cx
         return kf_x, kf_p, G
 
     def kf_update(self, kf_x, kf_p):
@@ -245,16 +245,25 @@ class LandmarkOdometerKf:
             lm_x = self.kf_get_lm_position_from_state(kf_x, i_lm)
             print(f"i: {i_lm}, lm_x: {lm_x}")
             # y, S, H = calc_innovation(lm_x, xEst, PEst, z[iz, 0:2], minid)
-            innovation = self.kf_calculate_innovation_polar(lm_x, lm_ranges[i_lm, 0:2], kf_x[0:3])
-            # print(f"innovation {innovation}\n")
+            innovation, H, S = self.kf_calculate_innovation_polar(lm_x, lm_ranges[i_lm, 0:2], kf_x[0:3], kf_p, i_lm)
+            # print(
+            #     f"p {kf_p.shape}\n"
+            #     f"H {H.shape}\n"
+            #     f"S {S.shape}\n"
+            # )
 
-            # TODO integrate covariance:
-            #  1) run update with gain of 0.5
-            #  2) propagate covariance calculations and review dynamic gain
-
-            # K = (kf_p @ self.H.T) @ np.linalg.inv(self.S)  # Calculate kalman Gain, to start 0.5
-            # kf_x = kf_x + (K @ y)
-            # kf_p = (np.eye(len(kf_x)) - (K @ self.H)) @ kf_p
+            K = (kf_p @ H.T) @ np.linalg.inv(S)  # Calculate kalman Gain
+            print(
+                # f"K {K}\n"
+                f"K @ innovation {(K @ innovation)[0:3]}\n"
+                f"est x {kf_x[0:3]}"
+            )
+            # k_innov = (K @ innovation)[0:3]
+            # k_innov[2] = innovation[1]
+            # kf_x[0:3] = kf_x[0:3] + k_innov[0:3]
+            kf_x[0:3] = kf_x[0:3] + (K @ innovation)[0:3]
+            kf_p = (np.eye(len(kf_x)) - (K @ H)) @ kf_p
+            kf_x[2] = pi_mod4q(kf_x[2])
 
         return kf_x, kf_p
 
@@ -293,8 +302,7 @@ class LandmarkOdometerKf:
         )
         return innovation
 
-    @staticmethod
-    def kf_calculate_innovation_polar(lm_x, lm_range, pose):
+    def kf_calculate_innovation_polar(self, lm_x, lm_range, pose, kf_p, i_lm):
         """Calculate difference is position between current odometery pose
         and that working back from observed landmark and its known position
 
@@ -313,18 +321,55 @@ class LandmarkOdometerKf:
             pi_mod4q(est_theta - pose[2])
         )
 
-        innovation = np.array((
+        innov = np.array((
             lm_range[0] - est_polar[0],
-            pi_mod4q(lm_range[1]- est_polar[1])
+            pi_mod4q(lm_range[1] - est_polar[1])
         ))
+
+        q = est_polar[0]
+        # print(f"q {q}")
+        sq = np.sqrt(est_polar[0])
+        G = np.array([[-sq * est_x[0], - sq * est_x[1], 0, sq * est_x[0], sq * est_x[1]],
+                      [est_x[1], - est_x[0], -q, - est_x[1], est_x[0]]])
+        G = G / q
+
+        F1 = np.hstack((np.eye(3), np.zeros((3, 2 * len(self.landmarks)))))
+        F2 = np.hstack((np.zeros((2, 3)), np.zeros((2, 2 * i_lm)),
+                        np.eye(2), np.zeros((2, 2 * len(self.landmarks) - 2 * (i_lm + 1)))))
+
+        F = np.vstack((F1, F2))
+
+        H = G @ F
+        # H = G / lm_range[0]
+        # print(
+        #     f"G {G.shape}\n"
+        #     f"F {F.shape}\n"
+        #     f"H {H.shape}\n"
+        #     f"kf_p {kf_p.shape}\n"
+        # )
+        S = H @ kf_p @ H.T + np.diag([0.25, 0.25])
+
         print(
             f"obs polar {lm_range}\n"
             f"est polar (x,y) {est_polar}\n"
-            f"innovation {innovation}\n"
+            f"innovation {innov}\n"
+            f"H {H}\n"
+            f"G {G}\n"
+            f"S {S}\n"
         )
-        return innovation
+        return innov, H, S
 
-    @staticmethod
-    def kf_gain_innovation(kf_x, innovation, gain):
-        
-        return kf_x
+    # Demos - Ideal List
+    # [DONE] A Star Path Planning (assume map)
+    # [THIS WEEK] Localization with known correspondences (assume map) (Highest Priority)
+    # [THIS WEEK] Mapping (assume localization) (Next 1)
+    # Q Learning combined with A Star (assume map) (Lower Priority) (Next 3)
+    # Simultaneous localization and mapping (Next 2)
+
+    # [THIS WEEK] Confusion matrix for CNN
+    # [THIS WEEK] Some sort of accuracy/visual for localization accuracy
+
+    # Flask Server (Lowest Priority) (Next 4)
+
+    # Add a landmark mid routine or at start
+    # Navigate and discover fire

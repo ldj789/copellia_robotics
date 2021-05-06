@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt  # used for image plotting
 import json
 
 # Initial Variables
-LOOP_DURATION = 3  # in seconds
+LOOP_DURATION = 15  # in seconds
 speed_setting = 0.75
 kp = 2  # steering gain
 PI = np.pi  # constant
