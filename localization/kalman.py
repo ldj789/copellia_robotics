@@ -156,7 +156,7 @@ class LandmarkOdometerKf:
         kf_x, kf_p, G = self.kf_predict(kf_x)
 
         # Update
-        kf_x, PEst = self.kf_update(kf_x, kf_p)
+        kf_x, kf_p = self.kf_update(kf_x, kf_p)
 
         # Review
         print(
@@ -361,15 +361,18 @@ class LandmarkOdometerKf:
 
     # Demos - Ideal List
     # [DONE] A Star Path Planning (assume map)
-    # [THIS WEEK] Localization with known correspondences (assume map) (Highest Priority)
-    # [THIS WEEK] Mapping (assume localization) (Next 1)
+    # [DONE] Localization with known correspondences (assume map) (Highest Priority)
+    # [CURRENT - SAT - Shelve Sizing] Warehouse map for assuming in demos
+    # [CURRENT - SAT - Debugging] Mapping (assume localization) (Next 1)
     # Q Learning combined with A Star (assume map) (Lower Priority) (Next 3)
+    # Incorporate CNN into visible landmarks
     # Simultaneous localization and mapping (Next 2)
-
-    # [THIS WEEK] Confusion matrix for CNN
-    # [THIS WEEK] Some sort of accuracy/visual for localization accuracy
-
-    # Flask Server (Lowest Priority) (Next 4)
-
     # Add a landmark mid routine or at start
     # Navigate and discover fire
+    # Flask Server (Lowest Priority) (Next 4)
+
+    # [CURRENT - SUN] Accuracy Reporting - Confusion matrix for CNN
+    # [CURRENT - SUN] Accuracy Reporting - Localization Accuracy with hyper-parameters
+
+
+

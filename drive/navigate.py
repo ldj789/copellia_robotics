@@ -1,3 +1,4 @@
+import sim
 import numpy as np
 
 
@@ -43,6 +44,95 @@ def pi_mod4q(theta):
     so 90 degree direction not 270 degree direction
     """
     return ((theta + np.pi) % (2 * np.pi)) - np.pi
+
+
+class Navigation:
+    def __init__(self,
+                 client_id,
+                 left_motor_frame='Pioneer_p3dx_leftMotor',
+                 right_motor_frame='Pioneer_p3dx_rightMotor',
+                 speed=1,
+                 steering_gain=1,
+                 **kwargs):
+
+        self.client_id = client_id
+        _, self.left_motor_handle = sim.simxGetObjectHandle(client_id, left_motor_frame, sim.simx_opmode_oneshot_wait)
+        _, self.right_motor_handle = sim.simxGetObjectHandle(client_id, right_motor_frame, sim.simx_opmode_oneshot_wait)
+        self.speed = speed
+        self.steering_gain = steering_gain
+        self.queue = kwargs.get('queue', [])
+        self.destination = self.queue.pop(0) if len(self) > 0 else None
+        print(self.queue)
+
+    def __str__(self):
+        return f"Speed {self.speed}, Gain {self.steering_gain} Destination {self.destination}"
+
+    def __len__(self):
+        return len(self.queue)
+
+    def check_destination(self, pose, d=0.4):
+        """Check proximity to destination and maybe update pathing"""
+        if self.destination is None:
+            return
+
+        dist = np.sqrt((pose[0] - self.destination[0]) ** 2 + (pose[1] - self.destination[1]) ** 2)
+        if dist < d:
+            self.destination = self.queue.pop(0) if len(self) > 0 else None
+
+    def steer(self, pose):
+        if self.destination is None:
+            v, steer = 0, 0
+        else:
+            v, steer = self.speed, self.turn_to_point(pose) / np.pi
+
+        vl = v - self.steering_gain * steer
+        vr = v + self.steering_gain * steer
+
+        _ = sim.simxSetJointTargetVelocity(self.client_id, self.left_motor_handle, vl, sim.simx_opmode_streaming)
+        _ = sim.simxSetJointTargetVelocity(self.client_id, self.right_motor_handle, vr, sim.simx_opmode_streaming)
+
+    def stop(self):
+        _ = sim.simxSetJointTargetVelocity(self.client_id, self.left_motor_handle, 0, sim.simx_opmode_streaming)
+        _ = sim.simxSetJointTargetVelocity(self.client_id, self.right_motor_handle, 0, sim.simx_opmode_streaming)
+
+    def turn_to_point(self, pose):
+        """Turn to point from pose
+
+        Find the radians to turn in order to face point
+
+        In robot currently positive for left and negative for right
+
+        :param pose: current pose in x, y, theta (rads)
+        :param dest: destination x, y
+        :return: degrees to turn (rads)
+        """
+        phi = np.arctan2(self.destination[1] - pose[1], self.destination[0] - pose[0]) / np.pi
+        bearing = pose[2] / np.pi
+        rotation = phi - bearing
+        if rotation > 1:
+            rotation -= 2
+        elif rotation < -1:
+            rotation += 2
+        return rotation * np.pi
+
+    def update(self, pose, d=0.4):
+        self.check_destination(pose, d=d)
+        self.steer(pose)
+
+    def set_queue(self, way_points):
+        self.queue = way_points
+        self.destination = self.queue.pop(0) if len(self) > 0 else None
+
+    def insert_queue(self, way_point):
+        """Store current way point and use provided way point as destination"""
+        self.queue.insert(0, self.destination)
+        self.destination = way_point
+
+    def extend_queue(self, way_points):
+        if isinstance(way_points, list):
+            self.queue.extend(way_points)
+        else:  # Single way_point
+            self.queue.append(way_points)
 
 """
 bearing = imu.read_euler()[0] * math.pi/180

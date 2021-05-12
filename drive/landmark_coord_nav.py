@@ -1,29 +1,31 @@
 """Basic obstacle avoidance with Braitenberg algorithm
 
 """
+import os
 import sys
 import time  # used to keep track of time
 import numpy as np  # array library
+import json
 
 import sim
+import matplotlib.pyplot as plt  # used for image plotting
 
-from drive.navigate import turn_to_point, check_destination
+from drive.navigate import turn_to_point, check_destination, Navigation
 from sensors.odometery import Odometer
 from sensors.position import RobotGPS
 from sensors.proximity import ProximitySensorP3DX
 from sensors.vision import VisionSensorP3DX
 from localization.landmarks import RobotLandmarks
 from localization.kalman import LandmarkOdometerKf
-import matplotlib.pyplot as plt  # used for image plotting
-import json
 
 # Initial Variables
-LOOP_DURATION = 15  # in seconds
-speed_setting = 0.75
-kp = 2  # steering gain
+LOOP_DURATION = 35  # in seconds
+speed_setting = 1
+kp = 1  # steering gain
 PI = np.pi  # constant
 PLOTTING_FLAG = False
 SAVING_DATA = False
+SAVE_FILE = os.path.join("data", "lmkf-output.json")
 
 LANDMARK_FRAMES = ["LM_Blue", "LM_Green", "LM_Red", "LM_Yellow"]
 
@@ -31,9 +33,11 @@ LANDMARK_FRAMES = ["LM_Blue", "LM_Green", "LM_Red", "LM_Yellow"]
 coords = {
     1: (-3.8, -0.5),
     2: (-3.8, 3.8),
-    3: (3.5, 3.8),
+    3: (4.25, 3.8),
+    4: (4.25, 1.5),
+    5: (1, 1),
+    6: (-2, -2.5),
 }
-
 
 sim.simxFinish(-1)  # just in case, close all opened connections
 clientId = sim.simxStart('127.0.0.1', 19999, True, True, 5000, 5)
@@ -43,9 +47,7 @@ else:
     print('Connection not successful')
     sys.exit('Could not connect')
 
-# retrieve motor  handles
-_, left_motor_handle = sim.simxGetObjectHandle(clientId, 'Pioneer_p3dx_leftMotor', sim.simx_opmode_oneshot_wait)
-_, right_motor_handle = sim.simxGetObjectHandle(clientId, 'Pioneer_p3dx_rightMotor', sim.simx_opmode_oneshot_wait)
+navigation = Navigation(clientId, speed=speed_setting, steering_gain=kp)
 
 gps = RobotGPS(clientId)
 landmarks = RobotLandmarks(clientId, gps, landmark_frames=LANDMARK_FRAMES)
@@ -60,28 +62,37 @@ plotting_flag = False
 random_positions = []
 accurate_positions = []
 odometer_positions = []
+lmkf_positions = []
 export_data = []
 
 destination_queue = [
+    coords[1],
     coords[2],
     coords[3],
-    coords[2],
-    coords[1]
+    coords[4],
+    coords[5],
+    coords[6],
 ]
-current_destination = destination_queue.pop(0)
+navigation.set_queue(destination_queue)
 
 # start time
 t = time.time()
+iter = 0
 
 while (time.time() - t) < LOOP_DURATION:
+    iter += 1
     odometer.update_motors()
     gps.update_position()
     proximity.update_distances()
+    # if iter % 10 == 0:
+    #     lmkf.update()
     lmkf.update()
 
     random_positions.append(gps.get_position())
     accurate_positions.append(gps.get_position(actual=True))
     odometer_positions.append(odometer.get_position())
+
+    lmkf_positions.append(lmkf.pose)
     # print(f"{odometer} {gps}")
 
     min_dist, min_sensor_angle, min_ind = proximity.braitenberg_min()
@@ -100,34 +111,19 @@ while (time.time() - t) < LOOP_DURATION:
         'gps_x': gps.get_position()[0],
         'gps_y': gps.get_position()[1],
         'odometer_x': odometer.pose[0],
-        'odometer_y': odometer.pose[1]
+        'odometer_y': odometer.pose[1],
+        'kf_x': lmkf.pose[0],
+        'kf_y': lmkf.pose[1],
     })
 
-    current_pose = gps.get_pose()
-    current_destination = check_destination(current_pose, current_destination, destination_queue, d=0.5)
-
-    if current_destination is None:
-        v, steer = 0, 0
-    else:
-        v, steer = speed_setting, turn_to_point(current_pose, current_destination) / np.pi
-
-    vl = v - kp * steer
-    vr = v + kp * steer
-    # print("V_l =", vl)
-    # print("V_r =", vr)
-
-    _ = sim.simxSetJointTargetVelocity(clientId, left_motor_handle, vl, sim.simx_opmode_streaming)
-    _ = sim.simxSetJointTargetVelocity(clientId, right_motor_handle, vr, sim.simx_opmode_streaming)
-
-    time.sleep(0.1)  # loop executes once every 0.1 seconds (= 10 Hz)
+    navigation.update(gps.get_pose())
+    time.sleep(0.25)  # loop executes once every 0.1 seconds (= 10 Hz)
 
 # Post Allocation - Stop
-_ = sim.simxSetJointTargetVelocity(clientId, left_motor_handle, 0, sim.simx_opmode_streaming)
-_ = sim.simxSetJointTargetVelocity(clientId, right_motor_handle, 0, sim.simx_opmode_streaming)
-# print(vision.raw_image())
+navigation.stop()
 
 if SAVING_DATA:
-    with open('output.json', 'w') as data_out:
+    with open(SAVE_FILE, 'w') as data_out:
         data_out.write(json.dumps(export_data))
 
 if PLOTTING_FLAG:
@@ -137,10 +133,11 @@ if PLOTTING_FLAG:
     ys = list(map(lambda x: x[1], accurate_positions))
     oxs = list(map(lambda x: x[0], odometer_positions))
     oys = list(map(lambda x: x[1], odometer_positions))
+    kxs = list(map(lambda x: x[0], lmkf_positions))
+    kys = list(map(lambda x: x[1], lmkf_positions))
 
-    print(oxs, oys)
-
-    # plt.plot(rxs, rys, color='r')
     plt.plot(xs, ys, color='b')
-    plt.plot(oxs, oys, color='g')
+    plt.plot(oxs, oys, 'r--')
+    plt.plot(kxs, kys, color='g')
     plt.show()
+

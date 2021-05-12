@@ -81,8 +81,8 @@ class Odometer:
         self.last_time = datetime.now()
 
         # Calculate thetas
-        theta_l = wL * delta_time * self.r
-        theta_r = wR * delta_time * self.r
+        theta_l = wL * delta_time * self.r * 4
+        theta_r = wR * delta_time * self.r * 4
 
         # Update odometers
         self.left_odometer += theta_l
