@@ -94,7 +94,7 @@ mesh_points = []
 for segment in segment_properties:
     mesh_points.extend(get_wall_mesh_points(*get_wall_endpoints(*segment)))
 
-#Build obstacle coordinates
+# Build obstacle coordinates
 xs, ys = list(zip(*mesh_points))
 ox = xs
 oy = ys
