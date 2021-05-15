@@ -7,11 +7,12 @@ import json
 import matplotlib.pyplot as plt
 
 import sim
-from drive.navigate import turn_to_point, check_destination
+from drive.navigate import turn_to_point, check_destination, Navigation
 from drive.astar import AStarPlanner
 from sensors.position import RobotGPS
 from sensors.odometery import Odometer
 from localization.kalman import GpsOdometerKf
+
 
 #%%
 def get_wall_endpoints(x, theta, l):
@@ -51,30 +52,31 @@ def get_wall_mesh_points(start, end, marker_size=0.10):
 #from sensors.proximity import ProximitySensorP3DX
 
 #%%
-# Initial Variables
-speed_setting = 1.25
-PI = np.pi  # constant
-saving_data = False
-robot_radius = .38
-grid_size = .25
-gx = -4.0
-gy = -4.0
-
-export_data = []
-
-#%%
 # Connect to simulator
 sim.simxFinish(-1)  # just in case, close all opened connections
-clientID = sim.simxStart('127.0.0.1', 19999, True, True, 5000, 5)
-if clientID != -1:  # check if client connection successful
+clientId = sim.simxStart('127.0.0.1', 19999, True, True, 5000, 5)
+if clientId != -1:  # check if client connection successful
     print('Connected to remote API server')
 else:
     print('Connection not successful')
     sys.exit('Could not connect')
 
 #%%
+# Initial Variables
+speed_setting = 1.25
+steering_gain = 2
+PI = np.pi  # constant
+saving_data = False
+robot_radius = .38
+grid_size = .25
+gx = -4.0
+gy = -4.0
+navigation = Navigation(client_id=clientId, speed=speed_setting, steering_gain=steering_gain)
+export_data = []
+
+#%%
 # Retrieve map obstacles
-_, scene_indices, _, _, object_names = sim.simxGetObjectGroupData(clientID, sim.sim_object_shape_type, 0, sim.simx_opmode_oneshot_wait)
+_, scene_indices, _, _, object_names = sim.simxGetObjectGroupData(clientId, sim.sim_object_shape_type, 0, sim.simx_opmode_oneshot_wait)
 scene_objects = list(zip(object_names, scene_indices))
 # Retrieve wall objects
 wall_objects = list(filter(lambda x: x[0].startswith("240cmHighWall"), scene_objects))
@@ -92,8 +94,8 @@ for segment in wall_objects:
     length_match = re.match("240cmHighWall(\d+)cm", segment[0])
     if length_match:
         segment_length = int(length_match.group(1))
-        _, center_point = sim.simxGetObjectPosition(clientID, segment[1], -1, sim.simx_opmode_oneshot_wait)
-        _, (_, _, euler_gamma) = sim.simxGetObjectOrientation(clientID, segment[1], -1, sim.simx_opmode_oneshot_wait)
+        _, center_point = sim.simxGetObjectPosition(clientId, segment[1], -1, sim.simx_opmode_oneshot_wait)
+        _, (_, _, euler_gamma) = sim.simxGetObjectOrientation(clientId, segment[1], -1, sim.simx_opmode_oneshot_wait)
         segment_properties.append((center_point, euler_gamma, segment_length))
     
 rack_properties = []
@@ -101,27 +103,27 @@ for rack in rack_objects:
     # testing wall segment of 1.3 meters wide and .3 meters deep
     rack_length = 130
     rack_depth = 30
-    _, center_point = sim.simxGetObjectPosition(clientID, rack[1], -1, sim.simx_opmode_oneshot_wait)
-    _, (_, _, euler_gamma) = sim.simxGetObjectOrientation(clientID, rack[1], -1, sim.simx_opmode_oneshot_wait)
+    _, center_point = sim.simxGetObjectPosition(clientId, rack[1], -1, sim.simx_opmode_oneshot_wait)
+    _, (_, _, euler_gamma) = sim.simxGetObjectOrientation(clientId, rack[1], -1, sim.simx_opmode_oneshot_wait)
     rack_properties.append((center_point, euler_gamma, rack_length))
     # rack_points.append((center_point[0], center_point[1]))
 
 sliding_door_properties = []
 for sliding_door in sliding_door_objects:
     sliding_door_length = 350
-    _, center_point = sim.simxGetObjectPosition(clientID, sliding_door[1], -1, sim.simx_opmode_oneshot_wait)
-    _, (_, _, euler_gamma) = sim.simxGetObjectOrientation(clientID, sliding_door[1], -1, sim.simx_opmode_oneshot_wait)
+    _, center_point = sim.simxGetObjectPosition(clientId, sliding_door[1], -1, sim.simx_opmode_oneshot_wait)
+    _, (_, _, euler_gamma) = sim.simxGetObjectOrientation(clientId, sliding_door[1], -1, sim.simx_opmode_oneshot_wait)
     rack_properties.append((center_point, euler_gamma, sliding_door_length))
 
 door_properties = []
 for door in door_objects:
     door_length = 75
-    _, center_point = sim.simxGetObjectPosition(clientID, door[1], -1, sim.simx_opmode_oneshot_wait)
-    _, (_, _, euler_gamma) = sim.simxGetObjectOrientation(clientID, door[1], -1, sim.simx_opmode_oneshot_wait)
+    _, center_point = sim.simxGetObjectPosition(clientId, door[1], -1, sim.simx_opmode_oneshot_wait)
+    _, (_, _, euler_gamma) = sim.simxGetObjectOrientation(clientId, door[1], -1, sim.simx_opmode_oneshot_wait)
     door_properties.append((center_point, euler_gamma, door_length))
 
-_, table_point = sim.simxGetObjectPosition(clientID, table[1], -1, sim.simx_opmode_oneshot_wait)
-_, (_, _, table_gamma) = sim.simxGetObjectOrientation(clientID, table[1], -1, sim.simx_opmode_oneshot_wait)
+_, table_point = sim.simxGetObjectPosition(clientId, table[1], -1, sim.simx_opmode_oneshot_wait)
+_, (_, _, table_gamma) = sim.simxGetObjectOrientation(clientId, table[1], -1, sim.simx_opmode_oneshot_wait)
 table_point = (table_point[0], table_point[1])
 table_length = 140
 table_properties = [
@@ -130,7 +132,7 @@ table_properties = [
     ((table_point[0], table_point[1]-.3), table_gamma + np.pi/2, table_length)
 ]
 
-_, chair_point = sim.simxGetObjectPosition(clientID, chair[1], -1, sim.simx_opmode_oneshot_wait)
+_, chair_point = sim.simxGetObjectPosition(clientId, chair[1], -1, sim.simx_opmode_oneshot_wait)
 chair_point = (chair_point[0], chair_point[1])
 
 #%%
@@ -159,14 +161,10 @@ ox = xs
 oy = ys
 
 #%%
-# retrieve motor  handles
-_, left_motor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_leftMotor', sim.simx_opmode_oneshot_wait)
-_, right_motor_handle = sim.simxGetObjectHandle(clientID, 'Pioneer_p3dx_rightMotor', sim.simx_opmode_oneshot_wait)
-
-# Get starting poistion of robot
-gps = RobotGPS(clientID)
+# Get starting posotopm of robot
+gps = RobotGPS(clientId)
 gps_start = gps.get_position(actual=True)
-odometer = Odometer(clientID, 0.097, pose=[gps_start[0], gps_start[1], gps.get_orientation()])
+odometer = Odometer(clientId, 0.097, pose=[gps_start[0], gps_start[1], gps.get_orientation()])
 sx = gps_start[0]
 sy = gps_start[1]
 
@@ -196,40 +194,13 @@ if show_animation:  # pragma: no cover
 # Coordinates to drive along
 destination_queue = [(rx[i], ry[i]) for i in range(len(rx))]
 destination_queue.reverse()
-current_destination = destination_queue.pop(0)
-current_pose = gps.get_pose()
-kf = GpsOdometerKf(gps, odometer, pose=current_pose)
-
-print(
-    f"Staring Position\n" 
-    f"pose: {current_pose}\n"
-    f"target: {current_destination}\n"
-    f"required turn: {turn_to_point(current_pose, current_destination)}"
-)
-
+navigation.set_queue(destination_queue)
 
 while destination_queue:
     gps.update_position()
+    navigation.update(gps.get_pose())
     odometer.update_motors()
-    kf.update()
-    current_pose = gps.get_pose()
 
-    current_destination = check_destination(current_pose, current_destination, destination_queue)
-
-    if current_destination is None:
-        v, steer = 0, 0
-    else:
-        v, steer = speed_setting, turn_to_point(current_pose, current_destination) / np.pi
-
-    kp = 2  # steering gain
-    vl = v - kp * steer
-    vr = v + kp * steer
-    # print("V_l =", vl)
-    # print("V_r =", vr)
-
-    _ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, vl, sim.simx_opmode_streaming)
-    _ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, vr, sim.simx_opmode_streaming)
-    
     export_data.append({
         'actual_x': gps.get_position(actual=True)[0],
         'actual_y': gps.get_position(actual=True)[1],
@@ -237,18 +208,15 @@ while destination_queue:
         'odometer_y': odometer.pose[1],
         'gps_x': gps.get_position()[0],
         'gps_y': gps.get_position()[1],
-        'kf_x': kf.get_position()[0],
-        'kf_y': kf.get_position()[1],
         'v': odometer.get_velocity()
     })
     # loop executes once every 0.1 seconds (= 10 Hz)
     time.sleep(0.1)
 
 # Post Allocation - Stop
-_ = sim.simxSetJointTargetVelocity(clientID, left_motor_handle, 0, sim.simx_opmode_streaming)
-_ = sim.simxSetJointTargetVelocity(clientID, right_motor_handle, 0, sim.simx_opmode_streaming)
+navigation.stop()
 
 # save data
 if saving_data:
-    with open('output.json', 'w') as data_out:
+    with open('../output.json', 'w') as data_out:
         data_out.write(json.dumps(export_data))
