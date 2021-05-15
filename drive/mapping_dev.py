@@ -6,17 +6,15 @@ from pprint import pprint
 
 import sim
 import matplotlib.pyplot as plt
-from drive.navigate import turn_to_point, check_destination
+from drive.navigate import turn_to_point, check_destination, Navigation
 from sensors.proximity import ProximitySensorP3DX
 from sensors.position import RobotGPS
-from sensors.odometery import Odometer
-from localization.kalman import GpsOdometerKf
-
 # from sensors.proximity import ProximitySensorP3DX
 
 # Initial Variables
-loop_duration = 10  # in seconds
-speed_setting = 1
+loop_duration = 15  # in seconds
+speed_setting = 0.5
+steering_gain = 1.5
 # loop_duration = 0  # in seconds
 # speed_setting = 0
 PI = np.pi  # constant
@@ -40,17 +38,10 @@ else:
     print('Connection not successful')
     sys.exit('Could not connect')
 
-# retrieve motor  handles
-_, left_motor_handle = sim.simxGetObjectHandle(clientId, 'Pioneer_p3dx_leftMotor', sim.simx_opmode_oneshot_wait)
-_, right_motor_handle = sim.simxGetObjectHandle(clientId, 'Pioneer_p3dx_rightMotor', sim.simx_opmode_oneshot_wait)
-
-
 gps = RobotGPS(clientId)
 proximity = ProximitySensorP3DX(clientId)
 gps_start = gps.get_position(actual=True)
-odometer = Odometer(clientId, 0.097, pose=[gps_start[0], gps_start[1], gps.get_orientation()])
-
-# proximity = ProximitySensorP3DX(clientID)
+navigation = Navigation(clientId, speed=speed_setting, steering_gain=steering_gain)
 
 destination_queue = [
     coords[2],
@@ -58,73 +49,53 @@ destination_queue = [
     coords[2],
     coords[1]
 ]
-
-current_destination = destination_queue.pop(0)
-current_pose = gps.get_pose(actual=True)
-kf = GpsOdometerKf(gps, odometer, pose=current_pose)
+navigation.set_queue(destination_queue)
 
 print(
     f"Staring Position\n"
-    f"pose: {current_pose}\n"
-    f"target: {current_destination}\n"
-    f"required turn: {turn_to_point(current_pose, current_destination)}"
+    f"pose: {gps.get_pose(actual=True)}\n"
+    f"target: {destination_queue[0]}\n"
+    f"required turn: {turn_to_point(gps.get_pose(actual=True), destination_queue[0])}"
 )
-
 time.sleep(0.25)
+
 # start time
 t = time.time()
-
 obstacle_positions = []
 robot_positions = []
-
-# pprint(proximity.get_indexed_locations(pose=gps.get_pose()))
-# pprint(proximity.get_related_info(gps.frame._handle))
 iteration_count = 0
 
 while (time.time() - t) < loop_duration:
     iteration_count += 1
+    # Robot and Sensor Updates
     gps.update_position()
     proximity.update_distances()
-    odometer.update_motors()
+    current_pose = gps.get_pose(actual=True)
+    navigation.update(current_pose)
+    v, turning = navigation.report()
 
-    # kf.update()
-    current_pose = gps.get_pose()
+    print(f"speed: {v}, turning: {turning}")
 
-    obstacle_distances = proximity.get_distances()
-    print(obstacle_distances)
-    print(iteration_count)
-    proximate_objects = proximity.get_proximate_objects(current_pose=current_pose)
-    for i, obj in enumerate(proximate_objects):
-        proximate_objects[i] = obj + (iteration_count,)
-        print(proximate_objects[i])
+    # Mapping
+    if np.abs(turning) < 0.033:
+        obstacle_distances = proximity.get_distances()
+        # print(obstacle_distances)
+        # print(iteration_count)
+        proximate_objects = proximity.get_proximate_objects(current_pose=current_pose)
+        for i, obj in enumerate(proximate_objects):
+            proximate_objects[i] = obj + (iteration_count,)
+            # print(proximate_objects[i])
 
-    obstacle_positions.extend(proximate_objects)
+        # Tracking of elements
+        obstacle_positions.extend(proximate_objects)
 
-    print(current_pose)
     robot_positions.append(current_pose)
 
-    current_destination = check_destination(current_pose, current_destination, destination_queue)
-
-    if current_destination is None:
-        v, steer = 0, 0
-    else:
-        v, steer = speed_setting, turn_to_point(current_pose, current_destination) / np.pi
-
-    kp = 2  # steering gain
-    vl = v - kp * steer
-    vr = v + kp * steer
-    # print("V_l =", vl)
-    # print("V_r =", vr)
-
-    _ = sim.simxSetJointTargetVelocity(clientId, left_motor_handle, vl, sim.simx_opmode_streaming)
-    _ = sim.simxSetJointTargetVelocity(clientId, right_motor_handle, vr, sim.simx_opmode_streaming)
-    
-    # loop executes once every 0.1 seconds (= 10 Hz)
-    # time.sleep(0.1)
+    # Short Sleep loop executes once every 0.1 seconds (= 10 Hz)
+    time.sleep(0.1)
 
 # Post Allocation - Stop
-_ = sim.simxSetJointTargetVelocity(clientId, left_motor_handle, 0, sim.simx_opmode_streaming)
-_ = sim.simxSetJointTargetVelocity(clientId, right_motor_handle, 0, sim.simx_opmode_streaming)
+navigation.stop()
 
 # save data
 if saving_data:
@@ -144,7 +115,7 @@ if plotting_flag:
     plt.scatter(rxs, rys, color='r')
     plt.plot(xs, ys, color='b')
     # plt.text(rxs, rys, iterations)
-    [plt.annotate(iterations[i], (rxs[i] + .2, rys[i] + .2)) for i in range(len(iterations))]
+    # [plt.annotate(iterations[i], (rxs[i] + .2, rys[i] + .2)) for i in range(len(iterations))]
     # plt.plot(oxs, oys, color='g')
     # for i, sensor in enumerate(obstacle_positions):
     #     plt.annotate(sensor, (rxs[i], rys[i]))

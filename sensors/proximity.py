@@ -98,26 +98,24 @@ class ProximitySensorP3DX:
         obstacle_distances = self.get_distances()
         res = []
         for i, obstacle in enumerate(obstacle_distances):
-            if i in [6]:
-                # if True:
-                if obstacle[0] < 10:
-                    x_rp = self._sensor_locs[i][0]
-                    y_rp = self._sensor_locs[i][1]
-                    d_rp = np.sqrt(x_rp**2 + y_rp**2)
-                    theta_rp = np.arctan2(y_rp, x_rp)
-                    dx = d_rp * np.cos(current_pose[2] + theta_rp)
-                    dy = d_rp * np.sin(current_pose[2] + theta_rp)
-                    # dx = 0
-                    # dy = 0
-                    res.append((
-                        current_pose[0] + dx + obstacle[0] * np.cos(current_pose[2] - obstacle[1]),
-                        current_pose[1] + dy + obstacle[0] * np.sin(current_pose[2] - obstacle[1])
-                    ))
-                    # obstacle_positions.append(obstacle_position)
-                    # print(
-                    #     f"obs: {obstacle_position}\n"
-                    #     f"bearing {current_pose[2]} adjustment {obstacle[1]}"
-                    # )
+            if obstacle[0] < 10:
+                x_rp = self._sensor_locs[i][0]
+                y_rp = self._sensor_locs[i][1]
+                d_rp = np.sqrt(x_rp**2 + y_rp**2)
+                theta_rp = np.arctan2(y_rp, x_rp)
+                dx = d_rp * np.cos(current_pose[2] + theta_rp)
+                dy = d_rp * np.sin(current_pose[2] + theta_rp)
+                # dx = 0
+                # dy = 0
+                res.append((
+                    current_pose[0] + dx + obstacle[0] * np.cos(current_pose[2] - obstacle[1]),
+                    current_pose[1] + dy + obstacle[0] * np.sin(current_pose[2] - obstacle[1])
+                ))
+                # obstacle_positions.append(obstacle_position)
+                # print(
+                #     f"obs: {obstacle_position}\n"
+                #     f"bearing {current_pose[2]} adjustment {obstacle[1]}"
+                # )
         return res
 
     def braitenberg_min(self):

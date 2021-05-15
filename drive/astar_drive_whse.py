@@ -49,7 +49,6 @@ def get_wall_mesh_points(start, end, marker_size=0.10):
         return []
     return [(start[0] + (0.5 + i) * dx/n , start[1] + (0.5 + i) * dy/n) for i in range(n)]
 
-#from sensors.proximity import ProximitySensorP3DX
 
 #%%
 # Connect to simulator

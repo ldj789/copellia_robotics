@@ -62,6 +62,8 @@ class Navigation:
         self.steering_gain = steering_gain
         self.queue = kwargs.get('queue', [])
         self.destination = self.queue.pop(0) if len(self) > 0 else None
+        self.current_speed = 0
+        self.current_turning_rate = 0
         print(self.queue)
 
     def __str__(self):
@@ -69,6 +71,9 @@ class Navigation:
 
     def __len__(self):
         return len(self.queue)
+
+    def report(self):
+        return self.current_speed, self.current_turning_rate
 
     def check_destination(self, pose, d=0.4):
         """Check proximity to destination and maybe update pathing"""
@@ -84,6 +89,9 @@ class Navigation:
             v, steer = 0, 0
         else:
             v, steer = self.speed, self.turn_to_point(pose) / np.pi
+
+        self.current_speed = v
+        self.current_turning_rate = steer
 
         vl = v - self.steering_gain * steer
         vr = v + self.steering_gain * steer
