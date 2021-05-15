@@ -121,7 +121,14 @@ for door in door_objects:
     door_properties.append((center_point, euler_gamma, door_length))
 
 _, table_point = sim.simxGetObjectPosition(clientID, table[1], -1, sim.simx_opmode_oneshot_wait)
+_, (_, _, table_gamma) = sim.simxGetObjectOrientation(clientID, table[1], -1, sim.simx_opmode_oneshot_wait)
 table_point = (table_point[0], table_point[1])
+table_length = 140
+table_properties = [
+    ((table_point[0], table_point[1]+.3), table_gamma + np.pi/2, table_length),
+    ((table_point[0], table_point[1]), table_gamma + np.pi/2, table_length),
+    ((table_point[0], table_point[1]-.3), table_gamma + np.pi/2, table_length)
+]
 
 _, chair_point = sim.simxGetObjectPosition(clientID, chair[1], -1, sim.simx_opmode_oneshot_wait)
 chair_point = (chair_point[0], chair_point[1])
@@ -141,7 +148,9 @@ for sliding_door in sliding_door_properties:
 for door in door_properties:
     mesh_points.extend(get_wall_mesh_points(*get_wall_endpoints(*door)))
 
-mesh_points.append(table_point)
+# mesh_points.append(table_point)
+for table in table_properties:
+    mesh_points.extend(get_wall_mesh_points(*get_wall_endpoints(*table)))
 mesh_points.append(chair_point)
 
 # Build obstacle coordinates
@@ -185,7 +194,7 @@ if show_animation:  # pragma: no cover
 
 #%%
 # Coordinates to drive along
-destination_queue  = [(rx[i], ry[i]) for i in range(len(rx))]
+destination_queue = [(rx[i], ry[i]) for i in range(len(rx))]
 destination_queue.reverse()
 current_destination = destination_queue.pop(0)
 current_pose = gps.get_pose()
