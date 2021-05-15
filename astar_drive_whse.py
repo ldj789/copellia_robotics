@@ -80,7 +80,8 @@ scene_objects = list(zip(object_names, scene_indices))
 wall_objects = list(filter(lambda x: x[0].startswith("240cmHighWall"), scene_objects))
 rack_objects = list(filter(lambda x: x[0].startswith(('rack', 'X', 'x', 'Corner')), scene_objects))
 rack_objects.extend(list(filter(lambda x: x[0].startswith("Rack_"), scene_objects)))
-door_objects = list(filter(lambda x: x[0].startswith(('door', 'sliding')), scene_objects))
+door_objects = list(filter(lambda x: x[0].startswith('door'), scene_objects))
+sliding_door_objects = list(filter(lambda x: x[0].startswith('sliding'), scene_objects))
 table = list(filter(lambda x: x[0].startswith('customizable'), scene_objects))[0]
 chair = list(filter(lambda x: x[0].startswith('conference'), scene_objects))[0]
 
@@ -95,7 +96,6 @@ for segment in wall_objects:
         _, (_, _, euler_gamma) = sim.simxGetObjectOrientation(clientID, segment[1], -1, sim.simx_opmode_oneshot_wait)
         segment_properties.append((center_point, euler_gamma, segment_length))
     
-
 rack_properties = []
 for rack in rack_objects:
     # testing wall segment of 1.3 meters wide and .3 meters deep
@@ -106,10 +106,19 @@ for rack in rack_objects:
     rack_properties.append((center_point, euler_gamma, rack_length))
     # rack_points.append((center_point[0], center_point[1]))
 
-door_points = []
+sliding_door_properties = []
+for sliding_door in sliding_door_objects:
+    sliding_door_length = 350
+    _, center_point = sim.simxGetObjectPosition(clientID, sliding_door[1], -1, sim.simx_opmode_oneshot_wait)
+    _, (_, _, euler_gamma) = sim.simxGetObjectOrientation(clientID, sliding_door[1], -1, sim.simx_opmode_oneshot_wait)
+    rack_properties.append((center_point, euler_gamma, sliding_door_length))
+
+door_properties = []
 for door in door_objects:
+    door_length = 75
     _, center_point = sim.simxGetObjectPosition(clientID, door[1], -1, sim.simx_opmode_oneshot_wait)
-    door_points.append((center_point[0], center_point[1]))
+    _, (_, _, euler_gamma) = sim.simxGetObjectOrientation(clientID, door[1], -1, sim.simx_opmode_oneshot_wait)
+    door_properties.append((center_point, euler_gamma, door_length))
 
 _, table_point = sim.simxGetObjectPosition(clientID, table[1], -1, sim.simx_opmode_oneshot_wait)
 table_point = (table_point[0], table_point[1])
@@ -125,8 +134,13 @@ for segment in segment_properties:
 
 for rack in rack_properties:
     mesh_points.extend(get_wall_mesh_points(*get_wall_endpoints(*rack)))
-# mesh_points.extend(rack_points)
-mesh_points.extend(door_points)
+
+for sliding_door in sliding_door_properties:
+    mesh_points.extend(get_wall_mesh_points(*get_wall_endpoints(*sliding_door)))
+
+for door in door_properties:
+    mesh_points.extend(get_wall_mesh_points(*get_wall_endpoints(*door)))
+
 mesh_points.append(table_point)
 mesh_points.append(chair_point)
 
