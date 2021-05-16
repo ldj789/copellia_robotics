@@ -14,6 +14,7 @@ class ProximitySensorP3DX:
         self._handles = []
         self._sensor_vals = np.zeros(16)
         self.op_mode = sim.simx_opmode_oneshot_wait
+        self._prior_buffer = 1
 
         self._sensor_locs = np.array([
             [0.10637688636779785, 0.1381988525390625, -PI / 2],  # 1
@@ -55,13 +56,18 @@ class ProximitySensorP3DX:
             _, det_state, det_point, det_obj_handle, det_surface_norm = \
                 sim.simxReadProximitySensor(
                     self.client_id, handle, sim.simx_opmode_buffer
+                    # self.client_id, handle, sim.simx_opmode_oneshot_wait
                 )
+            buffer_match = abs(det_point[2] - self._prior_buffer) < 1e-3
+            self._prior_buffer = det_point[2]
 
-            # print(f"i: {i}\n"
-            #       f"det_point: {det_point}\n"
-            #       f"Norm {np.linalg.norm(det_point)}")
+            print(f"i: {i}\n"
+                  f"buffer match: {buffer_match}\n"
+                  f"det_point: {det_point}\n"
+                  f"Norm {np.linalg.norm(det_point)}")
 
-            self._sensor_vals[i] = np.linalg.norm(det_point) if np.linalg.norm(det_point) > 1e-10 else np.Inf
+            # self._sensor_vals[i] = np.linalg.norm(det_point) if np.linalg.norm(det_point) > 1e-10 else np.Inf
+            self._sensor_vals[i] = det_point[2] if (det_point[2] > 1e-8 and not buffer_match) else np.Inf
 
     def get_distances(self, **kwargs):
         if 'simple' in kwargs and kwargs['simple']:
@@ -87,18 +93,19 @@ class ProximitySensorP3DX:
             res.append(pos)
         return res
 
-    def get_proximate_objects(self, current_pose):
+    def get_proximate_objects(self, current_pose, cutoff=10):
         """calculate obstacle positions
         robot_x + distance * np.cos(obs_theta + robot_theta),
         robot_y + distance * np.sin(obs_theta + robot_theta)
         sensors have a relative facing angle and relative position angle (theta_rp)
         :param current_pose: current (x, y, theta) for robot
+        :param cutoff: distance cutoff
         :return: list of (x, y) for observed obstacles
         """
         obstacle_distances = self.get_distances()
         res = []
         for i, obstacle in enumerate(obstacle_distances):
-            if obstacle[0] < 10:
+            if obstacle[0] < cutoff:
                 x_rp = self._sensor_locs[i][0]
                 y_rp = self._sensor_locs[i][1]
                 d_rp = np.sqrt(x_rp**2 + y_rp**2)

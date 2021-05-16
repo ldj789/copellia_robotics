@@ -70,7 +70,7 @@ class Navigation:
         return f"Speed {self.speed}, Gain {self.steering_gain} Destination {self.destination}"
 
     def __len__(self):
-        return len(self.queue)
+        return len(self.queue) if self.queue is not None else 0
 
     def report(self):
         return self.current_speed, self.current_turning_rate

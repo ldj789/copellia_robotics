@@ -12,7 +12,7 @@ from sensors.position import RobotGPS
 # from sensors.proximity import ProximitySensorP3DX
 
 # Initial Variables
-loop_duration = 15  # in seconds
+loop_duration = 40  # in seconds
 speed_setting = 0.5
 steering_gain = 1.5
 # loop_duration = 0  # in seconds
@@ -50,6 +50,7 @@ destination_queue = [
     coords[1]
 ]
 navigation.set_queue(destination_queue)
+# navigation.set_queue(None)
 
 print(
     f"Staring Position\n"
@@ -74,12 +75,14 @@ while (time.time() - t) < loop_duration:
     navigation.update(current_pose)
     v, turning = navigation.report()
 
-    print(f"speed: {v}, turning: {turning}")
+    if iteration_count % 10 == 0:
+        print(f"speed: {v}, turning: {turning}")
 
     # Mapping
     if np.abs(turning) < 0.033:
         obstacle_distances = proximity.get_distances()
-        # print(obstacle_distances)
+        if iteration_count % 10 == 0:
+            print(obstacle_distances)
         # print(iteration_count)
         proximate_objects = proximity.get_proximate_objects(current_pose=current_pose)
         for i, obj in enumerate(proximate_objects):
