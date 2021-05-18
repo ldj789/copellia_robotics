@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from drive.navigate import turn_to_point, check_destination, Navigation
 from sensors.proximity import ProximitySensorP3DX
 from sensors.position import RobotGPS
+from mapping.mapping import ProximityMap
+
 # from sensors.proximity import ProximitySensorP3DX
 
 # Initial Variables
@@ -42,6 +44,7 @@ gps = RobotGPS(clientId)
 proximity = ProximitySensorP3DX(clientId)
 gps_start = gps.get_position(actual=True)
 navigation = Navigation(clientId, speed=speed_setting, steering_gain=steering_gain)
+proximity_map = ProximityMap(clientId, proximity)
 
 destination_queue = [
     coords[2],
@@ -78,20 +81,20 @@ while (time.time() - t) < loop_duration:
     if iteration_count % 10 == 0:
         print(f"speed: {v}, turning: {turning}")
 
-    # Mapping
-    if np.abs(turning) < 0.033:
-        obstacle_distances = proximity.get_distances()
-        if iteration_count % 10 == 0:
-            print(obstacle_distances)
-        # print(iteration_count)
-        proximate_objects = proximity.get_proximate_objects(current_pose=current_pose)
-        for i, obj in enumerate(proximate_objects):
-            proximate_objects[i] = obj + (iteration_count,)
-            # print(proximate_objects[i])
+    # Mapping # TODO change update name?
+    proximate_objects, obstacle_distances = proximity_map.update(current_pose, turning)
+    # if np.abs(turning) < 0.033:
+    #     obstacle_distances = proximity.get_distances()
+    #     if iteration_count % 10 == 0:
+    #         print(obstacle_distances)
+    #     # print(iteration_count)
+    #     proximate_objects = proximity.get_proximate_objects(current_pose=current_pose)
+    #     for i, obj in enumerate(proximate_objects):
+    #         proximate_objects[i] = obj + (iteration_count,)
+    #         # print(proximate_objects[i])
 
-        # Tracking of elements
-        obstacle_positions.extend(proximate_objects)
-
+    # Tracking of elements
+    obstacle_positions.extend(proximate_objects)
     robot_positions.append(current_pose)
 
     # Short Sleep loop executes once every 0.1 seconds (= 10 Hz)
@@ -108,7 +111,7 @@ if saving_data:
 if plotting_flag:
     rxs = list(map(lambda x: x[0], obstacle_positions))
     rys = list(map(lambda x: x[1], obstacle_positions))
-    iterations = list(map(lambda x: x[2], obstacle_positions))
+    # iterations = list(map(lambda x: x[2], obstacle_positions))  # Deprecated
     # sensors = list(map(lambda x: x[2], obstacle_positions))
     xs = list(map(lambda x: x[0], robot_positions))
     ys = list(map(lambda x: x[1], robot_positions))

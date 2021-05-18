@@ -362,17 +362,24 @@ class LandmarkOdometerKf:
     # Demos - Ideal List
     # [DONE] A Star Path Planning (assume map)
     # [DONE] Localization with known correspondences (assume map) (Highest Priority)
-    # [CURRENT - SAT - Shelve Sizing] Warehouse map for assuming in demos
-    # [CURRENT - SAT - Debugging] Mapping (assume localization) (Next 1)
-    # Q Learning combined with A Star (assume map) (Lower Priority) (Next 3)
+    # [DONE] Known Warehouse map for assuming in demos with proper shelve sizing
+    # [DONE] Mapping (assume localization)
+    # [NOW] Q-Learning and Mapping Followups
+    #   - Create map class with grid map
+    #   - Proximity to write points to grid s.t. when we add points together we do not duplicate
+    #   - Review fine adjustments for proximity sensors
+    #   - [Blocked by Map class] Q-Learning combined with AStar
     # Incorporate CNN into visible landmarks
-    # Simultaneous localization and mapping (Next 2)
+    # [NEXT - Saturday] Simultaneous localization and mapping
     # Add a landmark mid routine or at start
     # Navigate and discover fire
     # Flask Server (Lowest Priority) (Next 4)
 
-    # [CURRENT - SUN] Accuracy Reporting - Confusion matrix for CNN
-    # [CURRENT - SUN] Accuracy Reporting - Localization Accuracy with hyper-parameters
+    # [NOW - PAPER] Accuracy Reporting - Confusion matrix for CNN
+    # [NOW - PAPER] Accuracy Reporting - Localization Accuracy with hyper-parameters
 
-
-
+    # Record Videos
+    # A Star Path Planning
+    # Localization with known correspondences
+    # Mapping
+    # Record SLAM without PP (Saturday) Localization and Mapping
